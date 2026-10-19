@@ -2103,8 +2103,16 @@
 				<data>
 				Rg==
 				</data>
+				<key>bluetoothExternalDongleFailed</key>
+				<data>
+				AA==
+				</data>
+				<key>bluetoothInternalControllerInfo</key>
+				<data>
+				AAAAAAAAAAAAAAAAAAA=
+				</data>
 				<key>boot-args</key>
-				<string>keepsyms=1 debug=0x100 -wegnoegpu -vi2c-force-polling -v alcid=13</string>
+				<string>keepsyms=1 debug=0x100 -wegnoegpu -vi2c-force-polling -v alcid=13 -btlfxboardid</string>
 				<key>csr-active-config</key>
 				<data>
 				AAAAAA==
@@ -2126,6 +2134,8 @@
 			<array>
 				<string>boot-args</string>
 				<string>csr-active-config</string>
+				<string>bluetoothExternalDongleFailed</string>
+				<string>bluetoothInternalControllerInfo</string>
 			</array>
 		</dict>
 		<key>LegacyOverwrite</key>
