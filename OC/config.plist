@@ -330,6 +330,26 @@
 	<dict>
 		<key>Add</key>
 		<dict>
+			<key>PciRoot(0x0)/Pci(0x8,0x1)/Pci(0x0,0x0)</key>
+			<dict>
+				<key>AAPL00,override-no-connect</key>
+				<data>
+				AP///////wAJ5UAKAAAAABAfAQS1IhV4A3zlpFVMnyYP
+				UFQAAAABAQEBAQEBAQEBAQEBAQEBa24AoKBAhGAwIDYA
+				WNcQAAAaAAAA/Qw8pR8fTgEKICAgICAg/dcAoKBAXmAw
+				IDYAgJAhAAAaAAAA/gBORTE2MFFETS1OWTEKAqoCAx0A
+				4wWAAOYGBQFqaiRtGgAAAgM8pQAEaiRqJAAAAAAAAAAA
+				AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+				AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+				AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB/nATeQAAAwEU
+				pS8Bhf8JnwAvAB8APwaDAAIABQAAAAAAAAAAAAAAAAAA
+				AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+				AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+				AAAAAAAAAAAAAAAAAAAAAAAAAD6Q
+				</data>
+				<key>model</key>
+				<string>AMD Radeon RX Vega 8</string>
+			</dict>
 			<key>PciRoot(0x1)/Pci(0x2,0x2)/Pci(0x0,0x0)</key>
 			<dict>
 				<key>built-in</key>
@@ -695,7 +715,7 @@
 				<key>Comment</key>
 				<string>Intel Bluetooth Patcher</string>
 				<key>Enabled</key>
-				<true/>
+				<false/>
 				<key>ExecutablePath</key>
 				<string>Contents/MacOS/IntelBTPatcher</string>
 				<key>MaxKernel</key>
@@ -713,7 +733,7 @@
 				<key>Comment</key>
 				<string>Bluetooth Fixup for macOS 12+</string>
 				<key>Enabled</key>
-				<true/>
+				<false/>
 				<key>ExecutablePath</key>
 				<string>Contents/MacOS/BlueToolFixup</string>
 				<key>MaxKernel</key>
@@ -1946,7 +1966,7 @@
 			<key>TakeoffDelay</key>
 			<integer>0</integer>
 			<key>Timeout</key>
-			<integer>1</integer>
+			<integer>5</integer>
 		</dict>
 		<key>Debug</key>
 		<dict>
@@ -2112,7 +2132,7 @@
 				AAAAAAAAAAAAAAAAAAA=
 				</data>
 				<key>boot-args</key>
-				<string>keepsyms=1 debug=0x100 -wegnoegpu -vi2c-force-polling -v alcid=13 -btlfxboardid revpatch=sbvmm</string>
+				<string>keepsyms=1 debug=0x100 -vi2c-force-polling -v alcid=13 revpatch=sbvmm -NRedDPDelay -wegnoegpu -NRedGLFix -NRedVDA -NRedVCNNoGfxOff</string>
 				<key>csr-active-config</key>
 				<data>
 				AAAAAA==
