@@ -2112,7 +2112,7 @@
 				AAAAAAAAAAAAAAAAAAA=
 				</data>
 				<key>boot-args</key>
-				<string>keepsyms=1 debug=0x100 -wegnoegpu -vi2c-force-polling -v alcid=13 -btlfxboardid</string>
+				<string>keepsyms=1 debug=0x100 -wegnoegpu -vi2c-force-polling -v alcid=13 -btlfxboardid revpatch=sbvmm</string>
 				<key>csr-active-config</key>
 				<data>
 				AAAAAA==
@@ -2154,7 +2154,7 @@
 		<key>Generic</key>
 		<dict>
 			<key>AdviseFeatures</key>
-			<false/>
+			<true/>
 			<key>MLB</key>
 			<string>C020474014N00001M</string>
 			<key>MaxBIOSVersion</key>
