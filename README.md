@@ -62,18 +62,18 @@
 
 ### 5. 声卡与机身外放解决方案
 - **声卡主芯片**：Realtek ALC287（硬件 ID: VEN_10EC, DEV_0287）。
-- **编解码驱动**：AppleALC 1.9.8，`boot-args` 默认注入专属布局 `alcid=13`（备选布局 ID：`11`、`21`、`69`），3.5mm 耳机输出、内建麦克风输入完美驱动。
+- **编解码驱动**：AppleALC 1.9.8，`boot-args` 注入专属布局 `alcid=16`（备选布局 ID：`13`、`11`、`21`、`69`），3.5mm 耳机输出、内建麦克风输入完美驱动。
 - **机身自带外放功放（重磅支持）**：
   - 拯救者 R9000K / Legion 7 原厂外放扬声器硬件连接在 **Cirrus Logic CS35L41** 智能数字功放（ACPI 节点 `CLSA0100`，挂载于 AMD I2C 总线 `AMDI0010`）。
-  - 已集成最新 **`CirrusAudioFixup.kext` (v1.1.1)**，内置针对联想 Y760 / Legion 7 (Subsystem ID `17AA:3847` / `17AA:382B`) 的原厂 DSP 固件（`cs35l41-dsp1-spk-prot-17aa3847.wmfw`）与扬声器硬件保护调音（`LS639` Tuning），实现 macOS 下内建扬声器（Internal Speakers）正常外放发声。
-  - 启动参数已追加 **`-cirrusdbg`** 以输出功放握手与播放状态日志。
+  - 已集成最新 **`CirrusAudioFixup.kext` (v1.1.1)**，内置针对联想 Y760 / Legion 7 (Subsystem ID `17AA:3847` / `17AA:382B`) 的原厂 DSP 固件（`cs35l41-dsp1-spk-prot-17aa3847.wmfw`）与扬声器硬件保护调音（`LS639` Tuning）。
+  - 启动参数配置为 **`-cirrusro -cirrusdbg`**：只读安全探测与诊断模式，跳过直接高压写入，进入系统后通过 IOReg 校验探测结果确认无误后再开放直接播放。
 
 ---
 
 ## 当前完整启动参数（boot-args）
 
 ```text
-keepsyms=1 debug=0x100 -vi2c-force-polling -v alcid=13 revpatch=sbvmm -NRedDPDelay -wegnoegpu -NRedGLFix -NRedVDA -NRedVCNNoGfxOff -amfipassbeta -btlfxboardid -cirrusdbg
+keepsyms=1 debug=0x100 -vi2c-force-polling -v alcid=16 revpatch=sbvmm -NRedDPDelay -wegnoegpu -NRedGLFix -NRedVDA -NRedVCNNoGfxOff -amfipassbeta -btlfxboardid -cirrusro -cirrusdbg
 ```
 
 ---
