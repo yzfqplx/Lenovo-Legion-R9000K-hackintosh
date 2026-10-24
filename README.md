@@ -26,6 +26,8 @@
   - **`-NRedGLFix`**: 修复 Chrome、Edge、VS Code 等 Chromium/Electron 核心软件的 OpenGL 渲染白屏与闪烁问题。
   - **`-NRedVDA`**: 激活 AMD APU 硬件视频解码加速（Video Decode Acceleration）。
   - **`-NRedVCNNoGfxOff`**: 防止 VCN 视频解码模块在节能休眠调度时死锁。
+  - **`amfi=0x80` 与 `csr-active-config: 03080000` (AwgAAA==)**: NootedRed 1.0.1 在 macOS 15 下引入了用户态 Metal/GL 热补丁机制（修改 WindowServer 内存页中的 `AMDRadeonX5000MTLDriver`）。必须配合放行 AMFI 检查与 SIP 策略放行（`03080000`），否则内核会判定该修改内存页为 `Invalid Page` 并向 WindowServer 下发 `SIGKILL (Code Signature Invalid)` 导致无限黑屏循环。
+  - **`ipc_control_port_options=0`**: 解决开启 `amfi=0x80` 后部分基于 Electron 框架的应用程序（如 Chrome、VS Code、网盘等）因 IPC 端口通信权限导致的闪退问题。
 
 ### 3. CPU 电源管理与核心驱动
 - **Lilu**: 1.7.2（全面支持 macOS 15 内核 Hook 与防崩溃）。
@@ -58,7 +60,7 @@
 ## 当前完整启动参数（boot-args）
 
 ```text
-keepsyms=1 debug=0x100 -vi2c-force-polling -v alcid=13 revpatch=sbvmm -NRedDPDelay -wegnoegpu -NRedGLFix -NRedVDA -NRedVCNNoGfxOff
+keepsyms=1 debug=0x100 -vi2c-force-polling -v alcid=13 revpatch=sbvmm -NRedDPDelay -wegnoegpu -NRedGLFix -NRedVDA -NRedVCNNoGfxOff amfi=0x80 ipc_control_port_options=0
 ```
 
 ---
