@@ -26,15 +26,25 @@
   - **`-NRedGLFix`**: 修复 Chrome、Edge、VS Code 等 Chromium/Electron 核心软件的 OpenGL 渲染白屏与闪烁问题。
   - **`-NRedVDA`**: 激活 AMD APU 硬件视频解码加速（Video Decode Acceleration）。
   - **`-NRedVCNNoGfxOff`**: 防止 VCN 视频解码模块在节能休眠调度时死锁。
-  - **`amfi=0x80` 与 `csr-active-config: 03080000` (AwgAAA==)**: NootedRed 1.0.1 在 macOS 15 下引入了用户态 Metal/GL 热补丁机制（修改 WindowServer 内存页中的 `AMDRadeonX5000MTLDriver`）。必须配合放行 AMFI 检查与 SIP 策略放行（`03080000`），否则内核会判定该修改内存页为 `Invalid Page` 并向 WindowServer 下发 `SIGKILL (Code Signature Invalid)` 导致无限黑屏循环。
-  - **`ipc_control_port_options=0`**: 解决开启 `amfi=0x80` 后部分基于 Electron 框架的应用程序（如 Chrome、VS Code、网盘等）因 IPC 端口通信权限导致的闪退问题。
+  - **`AMFIPass.kext` (v1.4.1) 与 `-amfipassbeta`**: 
+    - 采用 OCLP/Acidanthera 官方 Lilu 动态 Hook 插件，替代粗暴全局关闭 AMFI 的 `amfi=0x80` 参数。
+    - **核心优势**：在内核层精准放行 NootedRed 1.0.1 在 WindowServer 进程中对 `AMDRadeonX5000MTLDriver` 驱动内存页的代码修改，避免触发 `SIGKILL (Invalid Page)` 崩溃。
+    - **完整保留原生权限**：微信、腾讯会议、Zoom 等第三方软件请求麦克风、摄像头（TCC 隐私权限）时能正常弹出授权窗口并调用外设；VS Code、Chrome、网盘等 Electron 应用原生稳定运行，无需额外注入 `ipc_control_port_options=0`。
+  - **`csr-active-config: 03080000` (AwgAAA==)**: 配合 AMFIPass 放行代码签名策略覆盖（Executable Policy Override）。
 
-### 3. CPU 电源管理与核心驱动
+### 3. CPU 电源管理与传感器监控
 - **Lilu**: 1.7.2（全面支持 macOS 15 内核 Hook 与防崩溃）。
 - **VirtualSMC**: 1.3.8（含 SMCBatteryManager / SMCLightSensor）。
 - **AMDRyzenCPUPowerManagement & SMCAMDProcessor**: 
-  - 支持 Ryzen 5800H 核心功耗与温度读取监控；
+  - 支持 Ryzen 5800H 8 核 16 线程的功耗、频率与各个核心温度读取监控；
   - *注：macOS 系统全新安装或跨版本升级阶段，如遇 NMI 中断超时，可临时禁用该两项驱动，进入系统后再行开启。*
+- **温度与功耗监控方式**：
+  1. **Stats（菜单栏实时监控，已安装运行）**：
+     - 位置：`/Applications/Stats.app`，常驻屏幕右上角菜单栏。
+     - 点击菜单栏图标可展开查看：CPU 各核心温度、Vega 核显温度、风扇转速、电池健康度与充放电功率。
+  2. **AMD Power Gadget（AMD 专属深度监控工具，已安装）**：
+     - 位置：`/Applications/AMD Power Gadget.app`。
+     - 专为 `AMDRyzenCPUPowerManagement` 与 `SMCAMDProcessor` 打造，图形化实时呈现每个物理核心的温度走势、频率曲线（MHz）以及瞬时功耗（Watts）。
 - **AppleALC**: 1.9.8。
 - **RestrictEvents**: 1.1.6。
 - **RealtekRTL8111**: 3.0.0。
@@ -60,7 +70,7 @@
 ## 当前完整启动参数（boot-args）
 
 ```text
-keepsyms=1 debug=0x100 -vi2c-force-polling -v alcid=13 revpatch=sbvmm -NRedDPDelay -wegnoegpu -NRedGLFix -NRedVDA -NRedVCNNoGfxOff amfi=0x80 ipc_control_port_options=0
+keepsyms=1 debug=0x100 -vi2c-force-polling -v alcid=13 revpatch=sbvmm -NRedDPDelay -wegnoegpu -NRedGLFix -NRedVDA -NRedVCNNoGfxOff -amfipassbeta
 ```
 
 ---
