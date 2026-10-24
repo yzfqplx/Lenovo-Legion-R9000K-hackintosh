@@ -54,8 +54,9 @@
   - 内置 `itlwm.kext` (v2.3.0)，完美兼容 macOS 15 Sequoia，不受系统无线架构改动影响。
   - 搭配 **HeliPort** 客户端，在顶部菜单栏像原生系统一样搜索、连接 Wi-Fi，并支持开机自启。
 - **蓝牙（Intel AX200 Bluetooth）**：
-  - 配置 `IntelBluetoothFirmware.kext` (v2.4.0) + `IntelBTPatcher.kext` (v2.4.0) + `BlueToolFixup.kext` (v2.7.2)。
-  - NVRAM 已注入 `bluetoothExternalDongleFailed` 与 `bluetoothInternalControllerInfo`。
+  - 配置 `IntelBluetoothFirmware.kext` (v2.4.0) + `IntelBTPatcher.kext` (v2.4.0) + `BlueToolFixup.kext` (v2.7.2) 全面启用。
+  - 启动参数添加 **`-btlfxboardid`**：让 `BlueToolFixup` 跳过苹果白名单机型 Board-ID 检查，使得当前机型定义能够无条件接管 Monterey/Ventura/Sonoma/Sequoia 的 BlueTool 蓝牙电源控制。
+  - NVRAM 已注入 `bluetoothExternalDongleFailed` 与 `bluetoothInternalControllerInfo`，确保系统冷启动及休眠唤醒后蓝牙开关状态恢复正常。
 - **有线网卡（Realtek RTL8168/8111）**：
   - 已配置最新版 `RealtekRTL8111.kext` (v3.0.0)，插上网线即插即用。
 
@@ -70,7 +71,7 @@
 ## 当前完整启动参数（boot-args）
 
 ```text
-keepsyms=1 debug=0x100 -vi2c-force-polling -v alcid=13 revpatch=sbvmm -NRedDPDelay -wegnoegpu -NRedGLFix -NRedVDA -NRedVCNNoGfxOff -amfipassbeta
+keepsyms=1 debug=0x100 -vi2c-force-polling -v alcid=13 revpatch=sbvmm -NRedDPDelay -wegnoegpu -NRedGLFix -NRedVDA -NRedVCNNoGfxOff -amfipassbeta -btlfxboardid
 ```
 
 ---
