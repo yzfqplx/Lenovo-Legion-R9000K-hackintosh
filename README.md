@@ -63,10 +63,13 @@
 ### 5. 声卡与机身外放解决方案
 - **声卡主芯片**：Realtek ALC287（硬件 ID: VEN_10EC, DEV_0287）。
 - **编解码驱动**：AppleALC 1.9.8，`boot-args` 注入专属布局 `alcid=16`（备选布局 ID：`13`、`11`、`21`、`69`），3.5mm 耳机输出、内建麦克风输入完美驱动。
-- **机身自带外放功放（重磅支持）**：
-  - 拯救者 R9000K / Legion 7 原厂外放扬声器硬件连接在 **Cirrus Logic CS35L41** 智能数字功放（ACPI 节点 `CLSA0100`，挂载于 AMD I2C 总线 `AMDI0010`）。
-  - 已集成最新 **`CirrusAudioFixup.kext` (v1.1.1)**，内置针对联想 Y760 / Legion 7 (Subsystem ID `17AA:3847` / `17AA:382B`) 的原厂 DSP 固件（`cs35l41-dsp1-spk-prot-17aa3847.wmfw`）与扬声器硬件保护调音（`LS639` Tuning）。
-  - 启动参数配置为 **`-cirrusro -cirrusdbg -cirrusssid=0x17AA3847`**：通过 `-cirrusssid=0x17AA3847` 显式授权拯救者硬件识别，并以只读安全探测与诊断模式（`-cirrusro`）启动。进入系统后通过 IOReg 校验探测结果确认无误后再去掉 `-cirrusro` 开放 DSP 智能播放。
+- **机身自带外放功放（重大突破）**：
+  - 拯救者 R9000K / Legion 7 原厂外放扬声器硬件连接在 **Cirrus Logic CS35L41** 智能数字功放（ACPI 节点 `CLSA0100`，挂载于 AMD I2C 总线 `AMDI0010` 的 `0x40` 与 `0x41` 地址）。
+  - **定制版 I2C 总线支持（VoodooI2C & VoodooI2CHID）**：采用作者定制分支（`hoaug-tran/VoodooI2C:main`），导出 `VoodooI2CTransferToAddress` 接口，解决标准版 VoodooI2C 缺失寻址传输导致系统在 `'SPKR'` 处超时卡死（busy timeout 60s）的问题。
+  - **CirrusAudioFixup.kext (v1.1.1)**：
+    - 针对 AMD APU PCI 子系统 ID 寄存器返回 0 导致白名单失效的问题进行了二进制补丁适配，显式赋权拯救者硬件 ID `0x17AA3847`。
+    - 内置针对联想 Y760 / Legion 7 (Subsystem ID `17AA:3847`) 的原厂 DSP 固件（`cs35l41-dsp1-spk-prot-17aa3847.wmfw`）与扬声器硬件保护调音（`LS639` Tuning）。
+  - **当前启动参数**：`-cirrusro -cirrusdbg -cirrusssid=0x17AA3847`（只读安全探测模式，待 Step 4 检测验证通过后移除 `-cirrusro` 即可开启正式声音播放）。
 
 ---
 
