@@ -15,6 +15,15 @@
 	</dict>
 	<key>files2</key>
 	<dict>
+		<key>MacOS/CirrusAudioFixup.bak_pup</key>
+		<dict>
+			<key>cdhash</key>
+			<data>
+			OLx1lo3BR/+TJH4hKVM3f3T8hOY=
+			</data>
+			<key>requirement</key>
+			<string>cdhash H"1512d21ffca0ad2d9121d68fbbb4592f944e3bba" or cdhash H"38bc75968dc147ff93247e212953377f74fc84e6"</string>
+		</dict>
 		<key>Resources/CirrusBuildManifest.plist</key>
 		<dict>
 			<key>hash</key>
