@@ -62,21 +62,18 @@
 
 ### 5. 声卡与机身外放解决方案
 - **声卡主芯片**：Realtek ALC287（硬件 ID: VEN_10EC, DEV_0287）。
-- **编解码驱动**：AppleALC 1.9.8，`boot-args` 注入专属布局 `alcid=13`（备选布局 ID：`11`、`21`、`69`），3.5mm 耳机输出、内建麦克风输入完美驱动。
+- **编解码驱动**：AppleALC 1.9.8，`boot-args` 注入专属布局 `alcid=11`（对应 Node 0x17 数字引脚，专供外接 CS35L41 智能功放），3.5mm 耳机输出、内建麦克风输入完美驱动。
 - **机身自带外放功放（重大突破）**：
   - 拯救者 R9000K / Legion 7 原厂外放扬声器硬件连接在 **Cirrus Logic CS35L41** 智能数字功放（ACPI 节点 `CLSA0100`，挂载于 AMD I2C 总线 `AMDI0010` 的 `0x40` 与 `0x41` 地址）。
-  - **定制版 I2C 总线支持（VoodooI2C & VoodooI2CHID）**：采用作者定制分支（`hoaug-tran/VoodooI2C:main`），导出 `VoodooI2CTransferToAddress` 接口，解决标准版 VoodooI2C 缺失寻址传输导致系统在 `'SPKR'` 处超时卡死（busy timeout 60s）的问题。
-  - **CirrusAudioFixup.kext (v1.1.1 原版官方构建)**：
-    - 使用作者官方发布的原始构建版本（MD5: `ef555dcdbce1852511b231b3c27ba7df`），内置针对联想 Y760 / Legion 7 (Subsystem ID `17AA:3847`) 的原厂 DSP 固件（`cs35l41-dsp1-spk-prot-17aa3847.wmfw`）与扬声器硬件保护调音（`LS639` Tuning）。
-    - 搭配 `-cirruslegacyprobe` 启动参数放行双功放硬件探测，无须任何二进制 Patch。
-  - **当前启动参数**：`-cirrusro -cirrusdbg -cirrusssid=0x17AA3847 -cirruslegacyprobe`（官方 Step 4 只读安全探测模式，待检测验证通过后移除 `-cirrusro` 即可开启正式声音播放）。
+  - **定制版 I2C 总线支持（VoodooI2C & VoodooI2CHID）**：采用定制分支导出 `VoodooI2CTransferToAddress` 接口，解决标准版 VoodooI2C 缺失寻址传输导致系统在 `'SPKR'` 处超时卡死的问题。
+  - **CirrusAudioFixup 动态播放状态与升压修补**：修补外置升压（External Boost）状态流转与 Pup 阶段握手，进入 `PLAYBACK_ACTIVE` 状态并正确解除数字音量静音（0 dB，PCM 增益 17 dB）。
 
 ---
 
 ## 当前完整启动参数（boot-args）
 
 ```text
-keepsyms=1 debug=0x100 -vi2c-force-polling -v alcid=13 revpatch=sbvmm -NRedDPDelay -wegnoegpu -NRedGLFix -NRedVDA -NRedVCNNoGfxOff -amfipassbeta -btlfxboardid -cirrusro -cirrusdbg -cirrusssid=0x17AA3847 -cirruslegacyprobe
+keepsyms=1 debug=0x100 -vi2c-force-polling -v alcid=11 revpatch=sbvmm -NRedDPDelay -wegnoegpu -NRedGLFix -NRedVDA -NRedVCNNoGfxOff -amfipassbeta -btlfxboardid -cirrusdbg -cirrusssid=0x17AA3847
 ```
 
 ---
