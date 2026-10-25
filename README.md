@@ -62,7 +62,7 @@
 
 ### 5. 声卡与机身外放解决方案
 - **声卡主芯片**：Realtek ALC287（硬件 ID: VEN_10EC, DEV_0287）。
-- **编解码驱动**：AppleALC 1.9.8，`boot-args` 注入专属布局 `alcid=11`（对应 Node 0x17 数字引脚，专供外接 CS35L41 智能功放），3.5mm 耳机输出、内建麦克风输入完美驱动。
+- **编解码驱动**：AppleALC 1.9.8，`boot-args` 注入专属布局 `alcid=11`（修补支持 Node 0x17 数字外放与 Node 0x12 内建数字麦克风），3.5mm 耳机输出、内建麦克风输入与外接耳麦输入完美驱动。
 - **机身自带外放功放（重大突破）**：
   - 拯救者 R9000K / Legion 7 原厂外放扬声器硬件连接在 **Cirrus Logic CS35L41** 智能数字功放（ACPI 节点 `CLSA0100`，挂载于 AMD I2C 总线 `AMDI0010` 的 `0x40` 与 `0x41` 地址）。
   - **定制版 I2C 总线支持（VoodooI2C & VoodooI2CHID）**：采用定制分支导出 `VoodooI2CTransferToAddress` 接口，解决标准版 VoodooI2C 缺失寻址传输导致系统在 `'SPKR'` 处超时卡死的问题。
