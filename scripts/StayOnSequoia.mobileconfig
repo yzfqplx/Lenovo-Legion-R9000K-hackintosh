@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>PayloadContent</key>
+  <array>
+    <dict>
+      <key>PayloadType</key><string>com.apple.applicationaccess</string>
+      <key>PayloadVersion</key><integer>1</integer>
+      <key>PayloadIdentifier</key><string>org.stayonsequoia.restrictions</string>
+      <key>PayloadUUID</key><string>83848CE9-6500-481D-AD61-AF75C8736736</string>
+      <key>PayloadEnabled</key><true/>
+      <key>PayloadDisplayName</key><string>Software Update Deferrals</string>
+
+      <!-- 核心：隐藏跨大版本升级 (macOS Tahoe) -->
+      <key>forceDelayedMajorSoftwareUpdates</key><true/>
+      <key>enforcedSoftwareUpdateMajorOSDeferredInstallDelay</key><integer>90</integer>
+
+      <!-- 延迟常规更新 -->
+      <key>forceDelayedSoftwareUpdates</key><true/>
+      <key>enforcedSoftwareUpdateMinorOSDeferredInstallDelay</key><integer>30</integer>
+      <key>enforcedSoftwareUpdateNonOSDeferredInstallDelay</key><integer>30</integer>
+    </dict>
+  </array>
+
+  <key>PayloadType</key><string>Configuration</string>
+  <key>PayloadVersion</key><integer>1</integer>
+  <key>PayloadIdentifier</key><string>org.stayonsequoia.profile</string>
+  <key>PayloadUUID</key><string>578995C8-0171-45BD-8769-A33E7D532D2F</string>
+  <key>PayloadDisplayName</key><string>Stay on Sequoia: 隐藏大版本更新</string>
+  <key>PayloadOrganization</key><string>Hackintosh Community</string>
+</dict>
+</plist>
