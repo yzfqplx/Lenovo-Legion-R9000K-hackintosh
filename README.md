@@ -25,7 +25,6 @@
   - **`-NRedDPDelay`**: 为 eDP 显示链路握手增加延时缓冲，确保高分屏顺利点亮。
   - **`-NRedGLFix`**: 修复 Chrome、Edge、VS Code 等 Chromium/Electron 核心软件的 OpenGL 渲染白屏与闪烁问题。
   - **`-NRedVDA`**: 激活 AMD APU 硬件视频解码加速（Video Decode Acceleration）。
-  - **`-NRedVCNNoGfxOff`**: 防止 VCN 视频解码模块在节能休眠调度时死锁。
   - **`AMFIPass.kext` (v1.4.1) 与 `-amfipassbeta`**: 
     - 采用 OCLP/Acidanthera 官方 Lilu 动态 Hook 插件，替代粗暴全局关闭 AMFI 的 `amfi=0x80` 参数。
     - **核心优势**：在内核层精准放行 NootedRed 1.1.1 在 WindowServer 进程中对 `AMDRadeonX5000MTLDriver` 驱动内存页的代码修改，避免触发 `SIGKILL (Invalid Page)` 崩溃。
@@ -73,7 +72,7 @@
 ## 当前完整启动参数（boot-args）
 
 ```text
-keepsyms=1 debug=0x100 -vi2c-force-polling -v alcid=11 revpatch=sbvmm -NRedDPDelay -wegnoegpu -NRedGLFix -NRedVDA -NRedVCNNoGfxOff -amfipassbeta -btlfxboardid -cirrusdbg -cirrusssid=0x17AA3847
+keepsyms=1 debug=0x100 -vi2c-force-polling -v alcid=13 revpatch=sbvmm -NRedDPDelay -wegnoegpu -NRedGLFix -NRedVDA -amfipassbeta -btlfxboardid -cirrusssid=0x17AA3847 darkwake=0
 ```
 
 ---
