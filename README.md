@@ -16,9 +16,8 @@
 
 ### 2. 核显驱动与显示解决方案（重磅更新）
 - **NootedRed**: 升级至最新 **1.1.1** 版本，全面驱动 Vega 8 核显开启 **Metal 3** 硬件图形加速与 2GB 显存分配。
-- **硬件级 EDID 注入与防黑屏（锁定 60Hz/120Hz）**:
-  - 在 `DeviceProperties` -> `Add` -> `PciRoot(0x0)/Pci(0x8,0x1)/Pci(0x0,0x0)` 注入 `AAPL00,override-no-connect`。
-  - 针对本机原装屏幕 **京东方 BOE NE160QDM-NY1（2.5K 165Hz 面板）** 注入专属 60Hz/120Hz 降频时序，彻底解决 165Hz 超高像素时钟（777MHz）导致核显发生 `Restart Channel: 23 GFX` 和 `WindowServer` 卡死黑屏问题。
+- **高分高刷内屏原生驱动与 HiDPI**:
+  - 原生支持原装屏幕 **京东方 BOE NE160QDM-NY1（2.5K 165Hz 面板）**，满血 165Hz 高刷新率与 Retina HiDPI 缩放稳定运行，无需任何降频限制。
 - **独显彻底屏蔽**:
   - 注入启动参数 `-wegnoegpu`，在内核层彻底屏蔽无驱动的 NVIDIA RTX 3070 Mobile 独显，防止双显卡争夺总线导致内屏黑屏或异常耗电发热。
 - **启动参数优化与视频硬解增强**:
