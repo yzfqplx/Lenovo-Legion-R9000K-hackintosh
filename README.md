@@ -69,12 +69,19 @@
   - **定制版 I2C 总线支持（VoodooI2C & VoodooI2CHID）**：采用定制分支导出 `VoodooI2CTransferToAddress` 接口，解决标准版 VoodooI2C 缺失寻址传输导致系统在 `'SPKR'` 处超时卡死的问题。
   - **CirrusAudioFixup 动态播放状态与升压修补**：修补外置升压（External Boost）状态流转与 Pup 阶段握手，进入 `PLAYBACK_ACTIVE` 状态并正确解除数字音量静音（0 dB，PCM 增益 17 dB）。
 
+### 6. USB 端口定制与内置摄像头
+- **USB 控制器架构**：针对 AMD Cezanne 双 xHCI 控制器（`XHC0` 与 `XHC1`）通过 `USBToolBox.kext` + `UTBMap.kext` 进行全局精准映射。
+- **内置摄像头与全端口解锁**：
+  - 完整补齐 `XHC0` 与 `XHC1` 控制器下所有的硬件端口定义（Port 1 ~ Port 8），并将内置摄像头端口与蓝牙、键盘灯控芯片标记为 `UsbConnector = 255 (Internal)` 原生内建设备。
+  - 启动参数注入 **`-utbappleoff`**：严格防止 `USBToolBox` 裁剪系统原生识别的硬件连接端口，保障全机身 USB-A、Type-C 以及内置摄像头即插即用。
+  - *注：联想拯救者 R9000K 机身右侧配有物理摄像头防窥开关（E-Shutter），使用摄像头时需确保该开关处于开启状态。*
+
 ---
 
 ## 当前完整启动参数（boot-args）
 
 ```text
-keepsyms=1 debug=0x100 -vi2c-force-polling -v alcid=13 revpatch=sbvmm -NRedDPDelay -wegnoegpu -NRedGLFix -NRedVDA -amfipassbeta -btlfxboardid -cirrusssid=0x17AA3847 darkwake=0
+keepsyms=1 debug=0x100 -vi2c-force-polling -v alcid=13 revpatch=sbvmm -NRedDPDelay -wegnoegpu -NRedGLFix -NRedVDA -amfipassbeta -btlfxboardid -cirrusssid=0x17AA3847 darkwake=0 -utbappleoff
 ```
 
 ---
