@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>BuildMachineOSBuild</key>
-	<string>21H1015</string>
+	<string>24H32</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleExecutable</key>
@@ -17,29 +17,29 @@
 	<key>CFBundlePackageType</key>
 	<string>KEXT</string>
 	<key>CFBundleShortVersionString</key>
-	<string>0.7.2</string>
+	<string>0.9.1</string>
 	<key>CFBundleSupportedPlatforms</key>
 	<array>
 		<string>MacOSX</string>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>0.7.2</string>
+	<string>0.9.1</string>
 	<key>DTCompiler</key>
 	<string>com.apple.compilers.llvm.clang.1_0</string>
 	<key>DTPlatformBuild</key>
-	<string>13F100</string>
+	<string>25C58</string>
 	<key>DTPlatformName</key>
 	<string>macosx</string>
 	<key>DTPlatformVersion</key>
-	<string>12.3</string>
+	<string>26.2</string>
 	<key>DTSDKBuild</key>
-	<string>21E226</string>
+	<string>25C58</string>
 	<key>DTSDKName</key>
-	<string>macosx12.3</string>
+	<string>macosx26.2</string>
 	<key>DTXcode</key>
-	<string>1341</string>
+	<string>2630</string>
 	<key>DTXcodeBuild</key>
-	<string>13F100</string>
+	<string>17C529</string>
 	<key>IOKitPersonalities</key>
 	<dict>
 		<key>wtf.spinach.AMDRyzenCPUPowerManagement</key>
@@ -66,11 +66,11 @@
 		</dict>
 	</dict>
 	<key>LSMinimumSystemVersion</key>
-	<string>10.13</string>
+	<string>13.0</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright © 2020 trulyspinach. All rights reserved.</string>
 	<key>OSBundleCompatibleVersion</key>
-	<string>0.6</string>
+	<string>0.9.1</string>
 	<key>OSBundleLibraries</key>
 	<dict>
 		<key>as.vit9696.Lilu</key>
