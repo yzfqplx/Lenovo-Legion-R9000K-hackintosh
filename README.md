@@ -29,6 +29,9 @@
     - **核心优势**：在内核层精准放行 NootedRed 1.1.1 在 WindowServer 进程中对 `AMDRadeonX5000MTLDriver` 驱动内存页的代码修改，避免触发 `SIGKILL (Invalid Page)` 崩溃。
     - **完整保留原生权限**：微信、腾讯会议、Zoom 等第三方软件请求麦克风、摄像头（TCC 隐私权限）时能正常弹出授权窗口并调用外设；VS Code、Chrome、网盘等 Electron 应用原生稳定运行，无需额外注入 `ipc_control_port_options=0`。
   - **`csr-active-config: 03080000` (AwgAAA==)**: 配合 AMFIPass 放行代码签名策略覆盖（Executable Policy Override）。
+- **细腻阶梯背光控制优化 (SSDT-PNLF)**:
+  - 将 `SSDT-PNLF.aml` 中的背光设备 `_UID` 精确配置为 **`14`**（匹配 `F14Txxxx` 曲线），彻底修复原配置 `_UID=19` (F19 曲线) 因极高阶 Gamma 导致的“前 70% 极暗死黑、后 30% 刺眼暴亮、无中间阶梯”的通病。
+  - 优化后 50% 档位输出 20.5% 舒适室内亮度，16 级硬件阶梯温和递进，暗光下最低档保留温和底光不黑屏，并原生支持 <kbd>Shift</kbd> + <kbd>Option</kbd> + 亮度键启用 **64 级微调小阶梯**。
 
 ### 3. CPU 电源管理与传感器监控
 - **Lilu**: 1.7.2（全面支持 macOS 15 内核 Hook 与防崩溃）。
