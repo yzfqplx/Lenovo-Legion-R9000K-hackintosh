@@ -16,8 +16,9 @@
 
 ### 2. 核显驱动与显示解决方案（重磅更新）
 - **NootedRed**: 升级至最新 **1.1.1** 版本，全面驱动 Vega 8 核显开启 **Metal 3** 硬件图形加速与 2GB 显存分配。
-- **高分高刷内屏原生驱动与 HiDPI**:
-  - 原生支持原装屏幕 **京东方 BOE NE160QDM-NY1（2.5K 165Hz 面板）**，满血 165Hz 高刷新率与 Retina HiDPI 缩放稳定运行，无需任何降频限制。
+- **硬件级 EDID 注入与防唤醒黑屏（稳定 60Hz/120Hz）**:
+  - 在 `DeviceProperties` -> `Add` -> `PciRoot(0x0)/Pci(0x8,0x1)/Pci(0x0,0x0)` 注入原厂屏幕专属 `AAPL00,override-no-connect`。
+  - **核心原因**：本机原装屏幕 **京东方 BOE NE160QDM-NY1（2.5K 165Hz 面板）** 在 macOS 睡眠息屏后，165Hz 超高像素时钟（777MHz）会导致 Vega 8 APU 显示通道在唤醒重连（eDP Link Training）时握手失败，引发永久黑屏；注入 60Hz/120Hz 标准时序（像素时钟 282MHz / 552MHz）并在唤醒阶段固化 EDID 缓存，彻底解决息屏与睡眠唤醒黑屏。
 - **独显彻底屏蔽**:
   - 注入启动参数 `-wegnoegpu`，在内核层彻底屏蔽无驱动的 NVIDIA RTX 3070 Mobile 独显，防止双显卡争夺总线导致内屏黑屏或异常耗电发热。
 - **启动参数优化与视频硬解增强**:
@@ -69,11 +70,12 @@
   - **定制版 I2C 总线支持（VoodooI2C & VoodooI2CHID）**：采用定制分支导出 `VoodooI2CTransferToAddress` 接口，解决标准版 VoodooI2C 缺失寻址传输导致系统在 `'SPKR'` 处超时卡死的问题。
   - **CirrusAudioFixup 动态播放状态与升压修补**：修补外置升压（External Boost）状态流转与 Pup 阶段握手，进入 `PLAYBACK_ACTIVE` 状态并正确解除数字音量静音（0 dB，PCM 增益 17 dB）。
 
-### 6. USB 端口定制与内置摄像头
+### 6. USB 端口定制与规范映射
 - **USB 控制器架构**：针对 AMD Cezanne 双 xHCI 控制器（`XHC0` 与 `XHC1`）通过 `USBToolBox.kext` + `UTBMap.kext` 进行全局精准映射。
-- **内置摄像头与全端口解锁**：
-  - 完整补齐 `XHC0` 与 `XHC1` 控制器下所有的硬件端口定义（Port 1 ~ Port 8），并将内置摄像头端口与蓝牙、键盘灯控芯片标记为 `UsbConnector = 255 (Internal)` 原生内建设备。
-  - 启动参数注入 **`-utbappleoff`**：严格防止 `USBToolBox` 裁剪系统原生识别的硬件连接端口，保障全机身 USB-A、Type-C 以及内置摄像头即插即用。
+- **外设与内置端口类型校正**：
+  - 机身外部 USB-A / Type-C 接口统一配置为标准 `UsbConnector = 3`，防止外接 Hub 或键鼠被识别为不可拆卸内建设备导致睡眠 30 秒超时挂起（`Delays to Sleep notifications: WindowServer timed out`）。
+  - 内置蓝牙、RGB 灯控芯片（ITE Device 8258）精准保留为 `UsbConnector = 255 (Internal)` 原生内建设备。
+  - 移除干扰原生电源握手的参数 `-utbappleoff`，保障系统级 S3 休眠平滑握手。
   - *注：联想拯救者 R9000K 机身右侧配有物理摄像头防窥开关（E-Shutter），使用摄像头时需确保该开关处于开启状态。*
 
 ### 7. 睡眠唤醒与 NVMe 固态硬盘防睡死优化
@@ -89,7 +91,7 @@
 ## 当前完整启动参数（boot-args）
 
 ```text
-keepsyms=1 debug=0x100 -vi2c-force-polling -v alcid=13 revpatch=sbvmm -NRedDPDelay -NRedGLFix -NRedVDA -amfipassbeta -btlfxboardid -cirrusssid=0x17AA3847 -utbappleoff tlbto_us=0
+keepsyms=1 debug=0x100 -vi2c-force-polling -v alcid=13 revpatch=sbvmm -NRedDPDelay -NRedGLFix -NRedVDA -amfipassbeta -btlfxboardid -cirrusssid=0x17AA3847 tlbto_us=0
 ```
 
 ---
