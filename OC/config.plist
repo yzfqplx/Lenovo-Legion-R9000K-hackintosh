@@ -343,21 +343,6 @@
 			</dict>
 			<key>PciRoot(0x0)/Pci(0x8,0x1)/Pci(0x0,0x0)</key>
 			<dict>
-				<key>AAPL00,override-no-connect</key>
-				<data>
-				AP///////wAJ5UAKAAAAABAfAQS1IhV4A3zlpFVMnyYP
-				UFQAAAABAQEBAQEBAQEBAQEBAQEBa24AoKBAhGAwIDYA
-				WNcQAAAaAAAA/Qw8pR8fTgEKICAgICAg/dcAoKBAXmAw
-				IDYAgJAhAAAaAAAA/gBORTE2MFFETS1OWTEKAqoCAx0A
-				4wWAAOYGBQFqaiRtGgAAAgM8pQAEaiRqJAAAAAAAAAAA
-				AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-				AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-				AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB/nATeQAAAwEU
-				pS8Bhf8JnwAvAB8APwaDAAIABQAAAAAAAAAAAAAAAAAA
-				AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-				AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-				AAAAAAAAAAAAAAAAAAAAAAAAAD6Q
-				</data>
 				<key>model</key>
 				<string>AMD Radeon RX Vega 8</string>
 			</dict>
@@ -2214,7 +2199,7 @@
 				AAAAAAAAAAAAAAAAAAA=
 				</data>
 				<key>boot-args</key>
-				<string>keepsyms=1 debug=0x100 -vi2c-force-polling -v alcid=13 revpatch=sbvmm -NRedDPDelay -NRedGLFix -NRedVDA -amfipassbeta -btlfxboardid -cirrusssid=0x17AA3847 tlbto_us=0</string>
+				<string>keepsyms=1 debug=0x100 -vi2c-force-polling -v alcid=13 revpatch=sbvmm -NRedDPDelay -NRedGLFix -NRedVDA -amfipassbeta -btlfxboardid -cirrusssid=0x17AA3847 -utbappleoff tlbto_us=0</string>
 				<key>csr-active-config</key>
 				<data>
 				AwgAAA==

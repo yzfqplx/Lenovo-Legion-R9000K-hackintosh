@@ -16,9 +16,8 @@
 
 ### 2. 核显驱动与显示解决方案（重磅更新）
 - **NootedRed**: 升级至最新 **1.1.1** 版本，全面驱动 Vega 8 核显开启 **Metal 3** 硬件图形加速与 2GB 显存分配。
-- **硬件级 EDID 注入与防唤醒黑屏（稳定 60Hz/120Hz）**:
-  - 在 `DeviceProperties` -> `Add` -> `PciRoot(0x0)/Pci(0x8,0x1)/Pci(0x0,0x0)` 注入原厂屏幕专属 `AAPL00,override-no-connect`。
-  - **核心原因**：本机原装屏幕 **京东方 BOE NE160QDM-NY1（2.5K 165Hz 面板）** 在 macOS 睡眠息屏后，165Hz 超高像素时钟（777MHz）会导致 Vega 8 APU 显示通道在唤醒重连（eDP Link Training）时握手失败，引发永久黑屏；注入 60Hz/120Hz 标准时序（像素时钟 282MHz / 552MHz）并在唤醒阶段固化 EDID 缓存，彻底解决息屏与睡眠唤醒黑屏。
+- **高分高刷内屏原生驱动与 HiDPI**:
+  - 原生支持原装屏幕 **京东方 BOE NE160QDM-NY1（2.5K 165Hz 面板）**，满血 165Hz 高刷新率与 Retina HiDPI 缩放稳定运行。
 - **独显彻底屏蔽**:
   - 注入启动参数 `-wegnoegpu`，在内核层彻底屏蔽无驱动的 NVIDIA RTX 3070 Mobile 独显，防止双显卡争夺总线导致内屏黑屏或异常耗电发热。
 - **启动参数优化与视频硬解增强**:
@@ -30,9 +29,9 @@
     - **核心优势**：在内核层精准放行 NootedRed 1.1.1 在 WindowServer 进程中对 `AMDRadeonX5000MTLDriver` 驱动内存页的代码修改，避免触发 `SIGKILL (Invalid Page)` 崩溃。
     - **完整保留原生权限**：微信、腾讯会议、Zoom 等第三方软件请求麦克风、摄像头（TCC 隐私权限）时能正常弹出授权窗口并调用外设；VS Code、Chrome、网盘等 Electron 应用原生稳定运行，无需额外注入 `ipc_control_port_options=0`。
   - **`csr-active-config: 03080000` (AwgAAA==)**: 配合 AMFIPass 放行代码签名策略覆盖（Executable Policy Override）。
-- **屏幕背光控制 (SSDT-PNLF)**:
-  - 配置 `_UID = 19` 原生兼容 AMD Cezanne 核显与 NootedRed，保障睡眠唤醒时背光寄存器状态精准复原，杜绝唤醒黑屏无光。
-  - 16 级硬件亮度递进，原生支持 <kbd>Shift</kbd> + <kbd>Option</kbd> + 亮度键启用 **64 级微调小阶梯**。
+- **细腻阶梯背光控制优化 (SSDT-PNLF)**:
+  - 将 `SSDT-PNLF.aml` 中的背光设备 `_UID` 精确配置为 **`14`**（匹配 `F14Txxxx` 曲线），彻底修复原配置 `_UID=19` 因极高阶 Gamma 导致的“前 70% 极暗死黑、后 30% 刺眼暴亮、无中间阶梯”的通病。
+  - 优化后 50% 档位输出 20.5% 舒适室内亮度，16 级硬件阶梯温和递进，暗光下最低档保留温和底光不黑屏，并原生支持 <kbd>Shift</kbd> + <kbd>Option</kbd> + 亮度键启用 **64 级微调小阶梯**。
 
 ### 3. CPU 电源管理与传感器监控
 - **Lilu**: 1.7.2（全面支持 macOS 15 内核 Hook 与防崩溃）。
@@ -70,12 +69,11 @@
   - **定制版 I2C 总线支持（VoodooI2C & VoodooI2CHID）**：采用定制分支导出 `VoodooI2CTransferToAddress` 接口，解决标准版 VoodooI2C 缺失寻址传输导致系统在 `'SPKR'` 处超时卡死的问题。
   - **CirrusAudioFixup 动态播放状态与升压修补**：修补外置升压（External Boost）状态流转与 Pup 阶段握手，进入 `PLAYBACK_ACTIVE` 状态并正确解除数字音量静音（0 dB，PCM 增益 17 dB）。
 
-### 6. USB 端口定制与规范映射
+### 6. USB 端口定制与内置摄像头
 - **USB 控制器架构**：针对 AMD Cezanne 双 xHCI 控制器（`XHC0` 与 `XHC1`）通过 `USBToolBox.kext` + `UTBMap.kext` 进行全局精准映射。
-- **外设与内置端口类型校正**：
-  - 机身外部 USB-A / Type-C 接口统一配置为标准 `UsbConnector = 3`，防止外接 Hub 或键鼠被识别为不可拆卸内建设备导致睡眠 30 秒超时挂起（`Delays to Sleep notifications: WindowServer timed out`）。
-  - 内置蓝牙、RGB 灯控芯片（ITE Device 8258）精准保留为 `UsbConnector = 255 (Internal)` 原生内建设备。
-  - 移除干扰原生电源握手的参数 `-utbappleoff`，保障系统级 S3 休眠平滑握手。
+- **内置摄像头与全端口解锁**：
+  - 完整补齐 `XHC0` 与 `XHC1` 控制器下所有的硬件端口定义（Port 1 ~ Port 8），并将内置摄像头端口与蓝牙、键盘灯控芯片标记为 `UsbConnector = 255 (Internal)` 原生内建设备。
+  - 启动参数注入 **`-utbappleoff`**：严格防止 `USBToolBox` 裁剪系统原生识别的硬件连接端口，保障全机身 USB-A、Type-C 以及内置摄像头即插即用。
   - *注：联想拯救者 R9000K 机身右侧配有物理摄像头防窥开关（E-Shutter），使用摄像头时需确保该开关处于开启状态。*
 
 ### 7. 睡眠唤醒与 NVMe 固态硬盘防睡死优化
@@ -84,6 +82,7 @@
   - 配合系统级 `sudo pmset -a disksleep 0` 禁止闲置切断硬盘供电。
 - **AMD Ryzen 睡眠唤醒看门狗防恐慌与屏幕亮屏**：
   - 启动参数注入 **`tlbto_us=0`**：消除多物理核心唤醒响应 IPI/TLB 刷新时的看门狗超时恐慌（`TLB flush timeout` / `mp_kdp_enter`）。
+  - **恢复 AMDRyzenCPUPowerManagement 0.7.2**：消除 0.9.1 版本在 macOS 15 下唤醒时与 `SMCAMDProcessor` (1.0.1) 协议失步导致的 CPU 8 NMI/TLB 超时死锁（`mp_kdp_enter`）。
   - **移除 `darkwake=0`**：解决 macOS 15 Sequoia 下因 darkwake 机制改变导致的“主机已唤醒但屏幕维持下电黑屏”现象。
 
 ---
@@ -91,7 +90,7 @@
 ## 当前完整启动参数（boot-args）
 
 ```text
-keepsyms=1 debug=0x100 -vi2c-force-polling -v alcid=13 revpatch=sbvmm -NRedDPDelay -NRedGLFix -NRedVDA -amfipassbeta -btlfxboardid -cirrusssid=0x17AA3847 tlbto_us=0
+keepsyms=1 debug=0x100 -vi2c-force-polling -v alcid=13 revpatch=sbvmm -NRedDPDelay -NRedGLFix -NRedVDA -amfipassbeta -btlfxboardid -cirrusssid=0x17AA3847 -utbappleoff tlbto_us=0
 ```
 
 ---
