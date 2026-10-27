@@ -76,12 +76,19 @@
   - 启动参数注入 **`-utbappleoff`**：严格防止 `USBToolBox` 裁剪系统原生识别的硬件连接端口，保障全机身 USB-A、Type-C 以及内置摄像头即插即用。
   - *注：联想拯救者 R9000K 机身右侧配有物理摄像头防窥开关（E-Shutter），使用摄像头时需确保该开关处于开启状态。*
 
+### 7. 睡眠唤醒与 NVMe 固态硬盘防睡死优化
+- **NVMe 固态硬盘（WD Blue SN570）唤醒调页防崩溃**：
+  - 在 `DeviceProperties` 为路径 `PciRoot(0x0)/Pci(0x2,0x4)/Pci(0x0,0x0)` 注入 `built-in = 01` 与 `ps-max-latency-us = 0`，使 `NVMeFix` 彻底关闭西数自研主控的 APST 深度低功耗转换，杜绝唤醒时 APFS 读取可执行代码段损坏导致的段错误崩溃。
+  - 配合系统级 `sudo pmset -a disksleep 0` 禁止闲置切断硬盘供电。
+- **AMD Ryzen 睡眠唤醒看门狗防恐慌**：
+  - 启动参数注入 **`tlbto_us=0`**：消除多物理核心唤醒响应 IPI/TLB 刷新时的看门狗超时恐慌（`TLB flush timeout` / `mp_kdp_enter`）。
+
 ---
 
 ## 当前完整启动参数（boot-args）
 
 ```text
-keepsyms=1 debug=0x100 -vi2c-force-polling -v alcid=13 revpatch=sbvmm -NRedDPDelay -wegnoegpu -NRedGLFix -NRedVDA -amfipassbeta -btlfxboardid -cirrusssid=0x17AA3847 darkwake=0 -utbappleoff
+keepsyms=1 debug=0x100 -vi2c-force-polling -v alcid=13 revpatch=sbvmm -NRedDPDelay -NRedGLFix -NRedVDA -amfipassbeta -btlfxboardid -cirrusssid=0x17AA3847 darkwake=0 -utbappleoff tlbto_us=0
 ```
 
 ---

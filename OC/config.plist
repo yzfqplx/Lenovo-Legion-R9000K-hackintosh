@@ -330,6 +330,17 @@
 	<dict>
 		<key>Add</key>
 		<dict>
+			<key>PciRoot(0x0)/Pci(0x2,0x4)/Pci(0x0,0x0)</key>
+			<dict>
+				<key>built-in</key>
+				<data>
+				AQ==
+				</data>
+				<key>ps-max-latency-us</key>
+				<data>
+				AAAAAAAAAAA=
+				</data>
+			</dict>
 			<key>PciRoot(0x0)/Pci(0x8,0x1)/Pci(0x0,0x0)</key>
 			<dict>
 				<key>model</key>
@@ -2188,7 +2199,7 @@
 				AAAAAAAAAAAAAAAAAAA=
 				</data>
 				<key>boot-args</key>
-				<string>keepsyms=1 debug=0x100 -vi2c-force-polling -v alcid=13 revpatch=sbvmm -NRedDPDelay -wegnoegpu -NRedGLFix -NRedVDA -amfipassbeta -btlfxboardid -cirrusssid=0x17AA3847 darkwake=0 -utbappleoff</string>
+				<string>keepsyms=1 debug=0x100 -vi2c-force-polling -v alcid=13 revpatch=sbvmm -NRedDPDelay -NRedGLFix -NRedVDA -amfipassbeta -btlfxboardid -cirrusssid=0x17AA3847 darkwake=0 -utbappleoff tlbto_us=0</string>
 				<key>csr-active-config</key>
 				<data>
 				AwgAAA==
