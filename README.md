@@ -15,7 +15,7 @@
   - 启用 `PlatformInfo` -> `Generic` -> `AdviseFeatures: true` 配合固件更新支持。
 
 ### 2. 核显驱动与显示解决方案（重磅更新）
-- **NootedRed**: 升级至最新 **1.1.1** 版本，全面驱动 Vega 8 核显开启 **Metal 3** 硬件图形加速与 2GB 显存分配。
+- **NootedRed**: 升级至最新 **1.2.0** 版本（由 weachy 维护），全面驱动 Vega 8 核显开启 **Metal 3** 硬件图形加速与 2GB 显存分配，支持动态多版本特征码解析与全硬件视频编解码（AVC/HEVC）。
 - **高分高刷内屏原生驱动与 HiDPI**:
   - 原生支持原装屏幕 **京东方 BOE NE160QDM-NY1（2.5K 165Hz 面板）**，满血 165Hz 高刷新率与 Retina HiDPI 缩放稳定运行。
 - **独显彻底屏蔽**:
@@ -26,7 +26,7 @@
   - **`-NRedVDA`**: 激活 AMD APU 硬件视频解码加速（Video Decode Acceleration）。
   - **`AMFIPass.kext` (v1.4.1) 与 `-amfipassbeta`**: 
     - 采用 OCLP/Acidanthera 官方 Lilu 动态 Hook 插件，替代粗暴全局关闭 AMFI 的 `amfi=0x80` 参数。
-    - **核心优势**：在内核层精准放行 NootedRed 1.1.1 在 WindowServer 进程中对 `AMDRadeonX5000MTLDriver` 驱动内存页的代码修改，避免触发 `SIGKILL (Invalid Page)` 崩溃。
+    - **核心优势**：在内核层精准放行 NootedRed 1.2.0 在 WindowServer 进程中对 `AMDRadeonX5000MTLDriver` 驱动内存页的代码修改，避免触发 `SIGKILL (Invalid Page)` 崩溃。
     - **完整保留原生权限**：微信、腾讯会议、Zoom 等第三方软件请求麦克风、摄像头（TCC 隐私权限）时能正常弹出授权窗口并调用外设；VS Code、Chrome、网盘等 Electron 应用原生稳定运行，无需额外注入 `ipc_control_port_options=0`。
   - **`csr-active-config: 03080000` (AwgAAA==)**: 配合 AMFIPass 放行代码签名策略覆盖（Executable Policy Override）。
 - **细腻阶梯背光控制优化 (SSDT-PNLF)**:
@@ -90,7 +90,7 @@
 ## 当前完整启动参数（boot-args）
 
 ```text
-keepsyms=1 debug=0x100 -vi2c-force-polling -v alcid=13 revpatch=sbvmm -NRedDPDelay -NRedGLFix -NRedVDA -amfipassbeta -btlfxboardid -cirrusssid=0x17AA3847 -utbappleoff tlbto_us=0
+keepsyms=1 debug=0x100 -vi2c-force-polling -v alcid=13 revpatch=sbvmm -NRedDPDelay -amfipassbeta -btlfxboardid -cirrusssid=0x17AA3847 -utbappleoff tlbto_us=0
 ```
 
 ---

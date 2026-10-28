@@ -31,3 +31,5 @@ opencore-*.txt
 *.orig
 BOOT_backup/
 OC_backup/
+
+GenSMBIOS/
