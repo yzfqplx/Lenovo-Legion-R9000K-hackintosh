@@ -42,7 +42,7 @@
 				<key>Comment</key>
 				<string></string>
 				<key>Enabled</key>
-				<true/>
+				<false/>
 				<key>Path</key>
 				<string>SSDT-HPET.aml</string>
 			</dict>
@@ -104,11 +104,11 @@
 			</dict>
 			<dict>
 				<key>Comment</key>
-				<string>Inhibit GPE 0x19 instant wake while keeping USB keyboard active</string>
+				<string>Inhibit GPE 0x19 instant wake on GP17/XHC0/XHC1 without disabling USB</string>
 				<key>Enabled</key>
 				<true/>
 				<key>Path</key>
-				<string>SSDT-GPRW.aml</string>
+				<string>SSDT-PRW-NO-WAKE.aml</string>
 			</dict>
 		</array>
 		<key>Delete</key>
@@ -349,18 +349,18 @@
 			</dict>
 			<dict>
 				<key>Base</key>
-				<string></string>
+				<string>\_SB.PCI0.GP17</string>
 				<key>BaseSkip</key>
 				<integer>0</integer>
 				<key>Comment</key>
-				<string>change Method(GPRW,2,N) to XPRW</string>
+				<string>GP17: _PRW to XPRW</string>
 				<key>Count</key>
 				<integer>0</integer>
 				<key>Enabled</key>
 				<true/>
 				<key>Find</key>
 				<data>
-				R1BSVwI=
+				X1BSVw==
 				</data>
 				<key>Limit</key>
 				<integer>0</integer>
@@ -372,7 +372,7 @@
 				</data>
 				<key>Replace</key>
 				<data>
-				WFBSVwI=
+				WFBSVw==
 				</data>
 				<key>ReplaceMask</key>
 				<data>
@@ -383,22 +383,23 @@
 				<integer>0</integer>
 				<key>TableSignature</key>
 				<data>
+				RFNEVA==
 				</data>
 			</dict>
 			<dict>
 				<key>Base</key>
-				<string></string>
+				<string>\_SB.PCI0.GP17.XHC0</string>
 				<key>BaseSkip</key>
 				<integer>0</integer>
 				<key>Comment</key>
-				<string>change Method(UPRW,2,N) to YPRW</string>
+				<string>GP17.XHC0: _PRW to XPRW</string>
 				<key>Count</key>
 				<integer>0</integer>
 				<key>Enabled</key>
 				<true/>
 				<key>Find</key>
 				<data>
-				VVBSVwI=
+				X1BSVw==
 				</data>
 				<key>Limit</key>
 				<integer>0</integer>
@@ -410,7 +411,7 @@
 				</data>
 				<key>Replace</key>
 				<data>
-				WVBSVwI=
+				WFBSVw==
 				</data>
 				<key>ReplaceMask</key>
 				<data>
@@ -421,6 +422,46 @@
 				<integer>0</integer>
 				<key>TableSignature</key>
 				<data>
+				RFNEVA==
+				</data>
+			</dict>
+			<dict>
+				<key>Base</key>
+				<string>\_SB.PCI0.GP17.XHC1</string>
+				<key>BaseSkip</key>
+				<integer>0</integer>
+				<key>Comment</key>
+				<string>GP17.XHC1: _PRW to XPRW</string>
+				<key>Count</key>
+				<integer>0</integer>
+				<key>Enabled</key>
+				<true/>
+				<key>Find</key>
+				<data>
+				X1BSVw==
+				</data>
+				<key>Limit</key>
+				<integer>0</integer>
+				<key>Mask</key>
+				<data>
+				</data>
+				<key>OemTableId</key>
+				<data>
+				</data>
+				<key>Replace</key>
+				<data>
+				WFBSVw==
+				</data>
+				<key>ReplaceMask</key>
+				<data>
+				</data>
+				<key>Skip</key>
+				<integer>0</integer>
+				<key>TableLength</key>
+				<integer>0</integer>
+				<key>TableSignature</key>
+				<data>
+				RFNEVA==
 				</data>
 			</dict>
 		</array>
