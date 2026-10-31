@@ -60,42 +60,50 @@
 
 ---
 
-### 2.3 唤醒黑屏的两大核心根因（日志确诊数据）
+### 2.3 唤醒黑屏的三大核心根因（最新真实日志确诊数据）
 
-#### 核心根因 1：PCI 根桥路径偏差（`PciRoot(0x1)` vs `PciRoot(0x0)`）导致独显未屏蔽
-- **日志与设备树发现**：
-  在系统 `IORegistry` 设备树中审查发现，`PCI0` 根桥的 ACPI `_UID` 属性实际为 `"1"`！
-  - 真实的 UEFI 路径为：**`PciRoot(0x1)`**。
-  - 独立显卡真实路径：`PciRoot(0x1)/Pci(0x1,0x1)/Pci(0x0,0x0)`。
-  - 集成显卡真实路径：`PciRoot(0x1)/Pci(0x8,0x1)/Pci(0x0,0x0)`。
-- **历史盲区**：
-  原 `config.plist` 中的 `DeviceProperties -> Add` 全部将属性注入在 `PciRoot(0x0)` 路径下！导致 OpenCore 在引导阶段根本没有匹配到任何设备，针对独显注入的 `class-code: 0xFFFFFFFF`（伪装屏蔽）从未生效。
-- **致命后果**：
-  macOS 识别到了未受驱动的 RTX 3080 独显，并自动在其上加载了 **`IONDRVFramebuffer`** 以及 **`AppleGraphicsPowerManagement` (AGPM)**！在机器唤醒时，macOS 电源管理尝试向独显的 `AGPM` 发送唤醒指令并重置显示链路，导致显示总线发生仲裁冲突死锁。
-
-#### 核心根因 2：NootedRed 显卡驱动层电源门控超时（SDMA0 硬件死锁）
-- **内核日志确诊数据（2026-10-31 18:07:46 真实日志）**：
+#### 核心根因 1：独显未屏蔽导致双 Framebuffer 争夺与 AGPM 死锁
+- **设备树实测证据（IORegistry）**：
+  在系统 `IORegistry` 设备树中审查发现，`GFX0@0`（NVIDIA RTX 独显 `10de:2560`，ACPI 路径 `\_SB.PCI0.GPP0.PEGP`）上挂载了：
+  - `IONDRVFramebuffer`
+  - `AppleMCCSControlModule`
+  - `AppleUpstreamUserClientDriver`
+  - `AGPM` (AppleGraphicsPowerManagement)
+  其伴生独显音频控制器 `HDAU@0,1`（`10de:228e`，`\_SB.PCI0.GPP0.NHDA`）也挂载了 `AppleHDAController`。
+- **日志确诊数据（入睡与唤醒阶段）**：
   ```text
-  AMDRadeonX5000 [6:0:0]: Controller is enabled, finish initialization
-  AMDRadeonX5000 [6:0:0]: Timestamp 0xeb9 on channel 12 VMPT is not expired; stamp: 0xea8 -> 0xea8; HW stamps: read 0x2384 -> 0x2384, sent 0x2386; wait time 5002ms, ret 0xe00002d6
-  AMDRadeonX5000 [6:0:0]: channel 12 VMPT event timeout; pending stamps [3753..3769]
-  AMDRadeonX5000 [6:0:0]: HW Channel 11 SDMA0 is occupied by channel 24 stamp 4340
-  AMDRadeonX5000 [6:0:0]: channel 24 SDMA0 is hung! (lastReadTimestamp=0x000010f3)
-  AMDRadeonX5000HWLibs AMD Cail: [6:0:0] GPU HangState 0x00000000, HangFlags 0x00000004: IndividualEngineHang 0, NonEngineBlockHang 0, FenceNotRetired 1, PerEngineReset 0, FullAsicReset 1
-  Restart Channel: 24 SDMA0
+  2026-10-31 18:06:41.513023+0800 kernel: PMRD: kIOMessageSystemCapabilityChange[14] to com.apple.driver.AGPM
+  2026-10-31 18:06:41.513025+0800 kernel: PMRD: kIOMessageSystemCapabilityChange[15] to com.apple.driver.AGPM
+  2026-10-31 18:07:39.993214+0800 kernel: PMRD: kIOMessageSystemCapabilityChange[14] to com.apple.driver.AGPM
+  2026-10-31 18:07:39.993216+0800 kernel: PMRD: kIOMessageSystemCapabilityChange[15] to com.apple.driver.AGPM
+  ```
+- **解决机制（路线 A 落地）**：
+  引入 Dortania 官方规范的 `SSDT-GPU-DISABLE.aml`，利用 ACPI `_DSM` 针对 `\_SB.PCI0.GPP0.PEGP` 和 `\_SB.PCI0.GPP0.NHDA` 注入 `class-code: 0xFFFFFFFF`、`name: #display`。这样 `IOPCIFamily` 不会将其视作图形/音频设备，彻底阻断 `IONDRVFramebuffer` 与 `AGPM` 加载，同时不触碰硬件电源轨（不调用 `_OFF`），避免总线掉线与风扇狂转。
+
+#### 核心根因 2：`darkwake=1` 引发电源门控强行钳制屏幕与 Framebuffer（致命诱因！）
+- **日志确诊数据（2026-10-31 18:07:40 - 18:07:46）**：
+  ```text
+  2026-10-31 18:07:40.160526+0800 kernel: PMRD: power clamped IODisplayWrangler 10000046b, ps 4->0, cflags 0x9)
+  2026-10-31 18:07:41.046686+0800 kernel: PMRD: power clamped ATY,RadeonFramebuffer 1000004b0, ps 2->1, cflags 0x9)
+  2026-10-31 18:07:41.213918+0800 kernel: PMRD: power clamped ATY,RadeonFramebuffer 1000004b0, ps 2->1, cflags 0x2011)
+  2026-10-31 18:07:41.213923+0800 kernel: PMRD: dark wake power clamped after 1221 ms
+  2026-10-31 18:07:41.840881+0800 kernel: PMRD: power clamped IODisplayWrangler 10000046b, ps 4->0, cflags 0x2)
+  ... 5002ms 之后 ...
+  2026-10-31 18:07:46.168188+0800 kernel: (AMDRadeonX5000) [6:0:0]: Timestamp 0xeb9 on channel 12 VMPT is not expired; stamp: 0xea8 -> 0xea8; HW stamps: read 0x2384 -> 0x2384, sent 0x2386; wait time 5002ms, ret 0xe00002d6
+  2026-10-31 18:07:46.168257+0800 kernel: (AMDRadeonX5000) [6:0:0]: HW Channel 11 SDMA0 is occupied by channel 24 stamp 4340
+  2026-10-31 18:07:46.770023+0800 kernel: (AMDRadeonX5000) [6:0:0]: channel 24 SDMA0 is hung! (lastReadTimestamp=0x000010f3)
   CLKS: dcfclk,dcfclk_deep_sleep,dispclk,dppclk,fclk,socclk: 0,0,0,0,0,0
   CLK1_CLK3_ALLOW_DS,1,dcf_deep_sleep_allow
   ```
 - **技术机制剖析**：
-  1. **VMPT**（Virtual Memory Page Table）是 Vega 显卡 MMU 的显存虚拟分页管理通道，macOS 唤醒时需要通过 **SDMA0**（系统直接内存访问引擎）通道提交分页更新。
-  2. 硬件时间戳停滞在 `0x2384`，未能执行 `0x2386` 的请求，导致 5002ms 硬件超时。
-  3. 日志明确显示底层时钟状态：所有核心显示时钟均为 `0`（`CLKS: 0,0,0,0,0,0`），且处于 `dcf_deep_sleep_allow = 1`（深度睡眠允许）。
-  4. 反编译 `NootedRed` 发现其内嵌针对 Cezanne Vega 8 的 CAIL 默认配置为：
-     ```xml
-     <key>CAIL_DisablePowerGating</key><integer>0</integer>
-     <key>CAIL_DisableRlcSmuPGHandshake</key><integer>0</integer>
-     ```
-     驱动尝试通过独立显卡的 RLC-SMU 握手协议唤醒电源通道，但 APU 不支持该寄存器，握手死锁导致 SDMA0 和时钟无法从门控深度睡眠中苏醒，超时后驱动触发 `FullAsicReset 1`，由于 APU 无法执行独显级的总线重置，显卡直接彻底死锁。
+  1. `darkwake=1` 诱使 macOS 认为机器唤醒只是为了执行后台任务（DarkWake），电源管理模块 `IOPMrootDomain` 强行将 `IODisplayWrangler` 钳制在 `ps 0`（屏幕关闭），同时将核显 `ATY,RadeonFramebuffer` 钳制在 `ps 1`（低功耗限制状态）；
+  2. 核显驱动进入深度休眠逻辑，所有底层时钟全部停摆归零（`CLKS: 0,0,0,0,0,0`），并允许深度休眠（`dcf_deep_sleep_allow=1`）；
+  3. 与此同时，系统渲染服务（WindowServer）试图提交显存映射任务至 SDMA0 / VMPT 通道，由于时钟被停摆，SDMA0 无法执行任何传输指令，等待 5002ms 后超时死锁，驱动被迫发起 `FullAsicReset 1`，而 APU 无法完成独显级总线重置，显卡直接彻底报废黑屏；
+  4. **解决**：引导参数必须设置 **`darkwake=0`**，禁止暗中唤醒，任何唤醒立即执行 Full Wake，将显示协调器释放至 `ps 4`，核显时钟瞬间满血解冻。
+
+#### 核心根因 3：运行态背光 UID 滞后（0.88% 极暗黑屏）
+- **实测证据**：
+  在当前开机运行态的 `ioreg -p IOACPIPlane -n PNLF -l` 中，`_UID = "14"`、`AppleRestoreBacklight = 16`（最大 1808）。这是由于此前更新的 `SSDT-PNLF.aml`（`_UID = 19`）尚未同步进 EFI 分区并在开机时重置 NVRAM 导致的。同步 EFI 并重置 NVRAM 后此问题自动恢复。
 
 ---
 
@@ -125,28 +133,22 @@
 
 ---
 
-## 4. 下一次修复启动指南与行动路线图
+## 4. 修复实施进展与行动状态
 
-下一次排查唤醒黑屏时，应当沿着以下三条清晰路线逐步推进验证：
+### 路线 A：以非侵入方式安全屏蔽 NVIDIA 独显（✅ 已完成落地）
+- **实施方案**：创建并编译标准 Dortania 规范 ACPI 热补丁 `SSDT-GPU-DISABLE.aml`，挂载在 `OC/ACPI/` 并在 `config.plist` 中启用。
+- **作用对象**：
+  - `\_SB.PCI0.GPP0.PEGP`（独显本体 RTX 3070/3080）
+  - `\_SB.PCI0.GPP0.NHDA`（独显伴生音频 HDA）
+- **效果**：利用 `_DSM` 伪装 `class-code: 0xFFFFFFFF` 和 `name: #display`，阻断 `IONDRVFramebuffer`、`AGPM`、`AppleHDAController` 加载，同时避免调用 `_OFF()` 引发断电总线风暴与风扇狂转。
 
-### 路线 A：以非侵入方式安全屏蔽 NVIDIA 独显（优先级：最高）
-- **现状**：NVIDIA 独显（RTX 3080, `PciRoot(0x1)/Pci(0x1,0x1)/Pci(0x0,0x0)`）目前被加载了 `IONDRVFramebuffer` 和 `AGPM`。
-- **任务**：
-  1. 测试通过纯 ACPI 方式（如专为双显卡笔记本设计的 `SSDT-NoHybGfx.aml` 或标准的 `_STA = 0` / `_OFF` 安全屏蔽方案）彻底让 macOS 看不到该独显，同时确保不引起风扇满载狂转；
-  2. 验证进入系统后，`ioreg` 中再无 `IONDRVFramebuffer` 及独显节点；
-  3. 在独显完全干净剥离的情况下，单独测试 S3 睡眠与唤醒。
+### 路线 B：解决 Vega 8 唤醒显示时钟解冻（✅ 已完成落地）
+- **实施方案**：
+  1. 将引导参数中的 `darkwake=1` 更改为 **`darkwake=0`**，彻底根除唤醒瞬间由电源管理器发起的 `power clamped IODisplayWrangler ps 4->0` 和 `power clamped ATY,RadeonFramebuffer ps 2->1` 低功耗死锁！
+  2. 保持 `-NRedDPDelay` 提供 165Hz 高刷屏 eDP 链路握手缓冲；
+  3. 保持 `-NRedNoFVRC` 防止显存任务队列死锁。
 
-### 路线 B：解决 Vega 8 唤醒显示时钟解冻（优先级：高）
-- **现状**：唤醒时显卡核心时钟全为 0，`dcf_deep_sleep_allow = 1` 导致 SDMA0 超时。
-- **任务**：
-  1. 绝不通过改写驱动二进制来关时钟门控；
-  2. 优先通过 `boot-args` 进行安全调控：
-     - 测试 `-NRedDPDelay`（增加 eDP 链路握手延时）；
-     - 测试 `-NRedNoFVRC`（绕过显存任务提交挂钩）；
-     - 测试 `-NRedDisplayFix`；
-  3. 查阅 Linux 内核 `amdgpu` 驱动针对 Cezanne (Renoir/Green Sardine) 平台 S3 唤醒关于 `dcfclk` 深度休眠的配置参数（如 `amdgpu.dcfeaturemask` 对应的机制）。
-
-### 路线 C：BIOS 固件与电源管理协同（优先级：中）
+### 路线 C：BIOS 固件与电源管理协同（按需核对）
 - **检查项**：
   1. 使用 UMAF 工具进 BIOS 检查：
      - 确保睡眠模式为真正的 **S3 (Suspend to RAM)**，而非 Modern Standby (S0ix)；
@@ -163,18 +165,22 @@
 - ✅ **网络连接**：Intel AX200 Wi-Fi 正常上网，蓝牙 5.2 正常连接配对，Realtek 千兆有线网卡即插即用。
 - ✅ **声音与外放**：ALC287 耳机正常，Cirrus Logic CS35L41 双智能功放驱动机身扬声器正常发声。
 - ✅ **电池与传感器**：电池电量与充放电状态正常，CPU 各核心温度与功耗实时监控正常。
-- ⏳ **睡眠与唤醒**：入睡正常（平缓呼吸灯），唤醒内屏亮屏正在攻坚排查中。
+- ⏳ **睡眠与唤醒**：入睡正常，独显已完成 ACPI 屏蔽，DarkWake 门控已解冻，等待同步 EFI 并重启测试。
 
 ---
 
 ## 6. 当前引导参数与重要设置说明
 
-当前基线 `boot-args`（位于 Commit `150c52d`）：
+当前基线 `boot-args`：
 ```text
-keepsyms=1 debug=0x100 -vi2c-force-polling -v alcid=13 revpatch=sbvmm -NRedDPDelay -NRedGLFix -NRedVDA -amfipassbeta -btlfxboardid -cirrusssid=0x17AA3847 -utbappleoff tlbto_us=0 -NRedNoFVRC darkwake=1
+keepsyms=1 debug=0x100 -vi2c-force-polling -v alcid=13 revpatch=sbvmm -NRedDPDelay -NRedGLFix -NRedVDA -amfipassbeta -btlfxboardid -cirrusssid=0x17AA3847 -utbappleoff tlbto_us=0 -NRedNoFVRC darkwake=0
 ```
 
 > [!IMPORTANT]
-> **下次开工第一步**：
-> 1. 先验证系统开机是否恢复正常稳定。
-> 2. 参照上方第 4 节的行动路线图，从「路线 A：安全屏蔽 NVIDIA 独显（消除双显卡唤醒总线锁死）」开始着手实施。
+> **生效与验证步骤**：
+> 1. 执行 `sudo ./scripts/sync_efi.sh` 将仓库中最新的 `OC/config.plist` 和 `OC/ACPI/`（含 `SSDT-GPU-DISABLE.aml` 及 `SSDT-PNLF.aml`）同步至引导分区；
+> 2. 重启机器，在 OpenCore 引导选单界面按空格键，选中并执行 **【Reset NVRAM】**；
+> 3. 进入系统后，在终端验证：
+>    - `ioreg -p IOService -c IONDRVFramebuffer` 结果应为空（独显已彻底静默）；
+>    - `ioreg -p IOACPIPlane -n PNLF -l | grep UID` 应显示 `_UID = "19"`；
+> 4. 点击苹果菜单 ->「睡眠」，观察呼吸灯进入平缓闪烁后，轻按任意键测试唤醒亮屏。

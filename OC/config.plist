@@ -88,6 +88,14 @@
 			</dict>
 			<dict>
 				<key>Comment</key>
+				<string>Disable discrete NVIDIA RTX GPU and Audio (PEGP &amp; NHDA)</string>
+				<key>Enabled</key>
+				<true/>
+				<key>Path</key>
+				<string>SSDT-GPU-DISABLE.aml</string>
+			</dict>
+			<dict>
+				<key>Comment</key>
 				<string></string>
 				<key>Enabled</key>
 				<false/>
@@ -461,27 +469,14 @@
 	<dict>
 		<key>Add</key>
 		<dict>
-			<key>PciRoot(0x0)/Pci(0x1,0x1)/Pci(0x0,0x0)</key>
+			<key>PciRoot(0x1)/Pci(0x2,0x2)/Pci(0x0,0x0)</key>
 			<dict>
-				<key>IOName</key>
-				<string>#display</string>
-				<key>class-code</key>
+				<key>built-in</key>
 				<data>
-				/////w==
-				</data>
-				<key>name</key>
-				<data>
-				I2Rpc3BsYXkA
+				AQ==
 				</data>
 			</dict>
-			<key>PciRoot(0x0)/Pci(0x1,0x1)/Pci(0x0,0x1)</key>
-			<dict>
-				<key>class-code</key>
-				<data>
-				/////w==
-				</data>
-			</dict>
-			<key>PciRoot(0x0)/Pci(0x2,0x4)/Pci(0x0,0x0)</key>
+			<key>PciRoot(0x1)/Pci(0x2,0x4)/Pci(0x0,0x0)</key>
 			<dict>
 				<key>built-in</key>
 				<data>
@@ -492,17 +487,10 @@
 				AAAAAAAAAAA=
 				</data>
 			</dict>
-			<key>PciRoot(0x0)/Pci(0x8,0x1)/Pci(0x0,0x0)</key>
+			<key>PciRoot(0x1)/Pci(0x8,0x1)/Pci(0x0,0x0)</key>
 			<dict>
 				<key>model</key>
 				<string>AMD Radeon RX Vega 8</string>
-			</dict>
-			<key>PciRoot(0x1)/Pci(0x2,0x2)/Pci(0x0,0x0)</key>
-			<dict>
-				<key>built-in</key>
-				<data>
-				AQ==
-				</data>
 			</dict>
 		</dict>
 		<key>Delete</key>
@@ -2350,7 +2338,7 @@
 				AAAAAAAAAAAAAAAAAAA=
 				</data>
 				<key>boot-args</key>
-				<string>keepsyms=1 debug=0x100 -vi2c-force-polling -v alcid=13 revpatch=sbvmm -NRedDPDelay -NRedGLFix -NRedVDA -amfipassbeta -btlfxboardid -cirrusssid=0x17AA3847 -utbappleoff tlbto_us=0 -NRedNoFVRC darkwake=1</string>
+				<string>keepsyms=1 debug=0x100 -vi2c-force-polling -v alcid=13 revpatch=sbvmm -NRedDPDelay -NRedGLFix -NRedVDA -amfipassbeta -btlfxboardid -cirrusssid=0x17AA3847 -utbappleoff tlbto_us=0 -NRedNoFVRC darkwake=0</string>
 				<key>csr-active-config</key>
 				<data>
 				AwgAAA==
