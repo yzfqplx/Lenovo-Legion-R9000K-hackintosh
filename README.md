@@ -7,7 +7,7 @@
 ## 目录
 1. [硬件环境与配置基线](#1-硬件环境与配置基线)
 2. [睡眠唤醒黑屏深度排查全景报告（核心备忘录）](#2-睡眠唤醒黑屏深度排查全景报告核心备忘录)
-3. [五大不可逾越的配置红线](#3-五大不可逾越的配置红线)
+3. [六大不可逾越的配置红线](#3-六大不可逾越的配置红线)
 4. [下一次修复启动指南与行动路线图](#4-下一次修复启动指南与行动路线图)
 5. [系统当前各项硬件功能状态](#5-系统当前各项硬件功能状态)
 6. [当前引导参数与重要设置说明](#6-当前引导参数与重要设置说明)
@@ -57,6 +57,15 @@
 5. **背光调节 UID 严重偏差**：
    - **分析**：此前 `SSDT-PNLF.aml` 曾被误设置为 Intel 风格的 `_UID = 14`，导致唤醒后 AppleBacklight 将亮度重置为 `16/1808`（0.88% 极暗黑屏，肉眼无法察觉）。
    - **解决**：已恢复 `SSDT-PNLF.aml` 的 `_UID = 19`（`0x13`），匹配 AMD 曲线。在 IORegistry 中验证 `AppleRestoreBacklight = 123`，`ApplePanelRawBrightness = 38930`（最大 65403），证明背光本身数值已恢复正常。
+6. **独显 `_STA = 0` 隐身屏蔽引发的根桥脱节死锁**：
+   - **教训**：在 Commit `b69bdc0` 中，尝试通过注入 `Method (_STA, 0)` 将独显从 ACPI 树中隐藏。结果物理 PCIe 链路（RTX 3070）仍然通电，`AppleACPIPCI` 枚举物理 PCI 设备时发现缺少 ACPI 电源管理描述符，导致冷启动进入 OpenCore 或系统时直接死锁卡死，唤醒时根桥亦因无法管理下级设备而崩溃。
+   - **铁律**：严禁对链路已通电且训练的 PCIe 桥设备注入 `_STA = 0`。
+7. **`gpuswitch 2` 自动显卡切换陷阱（入睡整整卡顿 90 秒）**：
+   - **教训**：系统因检测到核显与未驱动独显，自动激活了 `gpuswitch 2`。入睡时 `IOGraphicsFamily` 广播通知所有 Framebuffer，独显上的 `IONDRVFramebuffer`（Index 1）因缺乏原生驱动无法应答，导致系统入睡卡滞整整 90 秒，触发 `graphics notify timeout (1, 1)`，并进而击溃核显 SMU 固件状态（`event_id=0xc0201`）。
+   - **解决**：在 NVRAM 注入 Apple 原生 `gpu-power-prefs = <01 00 00 00>` 并在系统层锁定 `sudo pmset -a gpuswitch 0`，彻底关闭自动显卡切换仲裁。
+8. **`config.plist` 中的 `PciRoot(0x1)` 虚假路径陷阱**：
+   - **教训**：此前在 `DeviceProperties` 中配置的设备均位于 `PciRoot(0x1)` 下。根据 IORegistry 严谨审查，本机全部设备（核显、NVMe、独显）的 ACPI 根桥全为 `PCI0`（`_UID = 0`），即 `PciRoot(0x0)`，导致此前注入的属性完全失效。
+   - **解决**：已将所有路径修正为真实的 `PciRoot(0x0)`。
 
 ---
 
@@ -120,9 +129,61 @@
 
 ---
 
-## 3. 五大不可逾越的配置红线
+### 2.5 Commit `b69bdc0` (`_STA=0`) 开机卡死与唤醒失败深度复盘
+- 在 Commit `b69bdc0` 中，尝试利用 `Method (_STA, 0)` 将独显 `\_SB.PCI0.GPP0.PEGP` 从 ACPI 命名空间中隐藏，导致机器“**唤醒不了，而且开机还进不来，换成 fe695b1 才进得来**”。
+- **深层物理机制**：
+  1. **ACPI 与物理 PCIe 链路脱节**：`_STA = 0` 仅对 ACPI 解析层生效，但根桥 `GPP0` 下方的物理 PCIe 硬件链路（RTX 3070 `10de:2560`）依然通电且处于已训练状态（PCI 配置空间依然返回 `class-code 030000`）；
+  2. **总线枚举仲裁死锁（冷启动卡死）**：`AppleACPIPCI` 遍历物理 PCI 配置空间时，读取到物理设备存在，却无法在 ACPI 设备树中获取对应的电源管理描述符（`_PR0/_PS0/_PS3`）。当桥设备 `GPP0` 尝试进行链路协商与功耗仲裁时陷入死锁，机器无法开机；
+  3. **唤醒死锁**：从 S3 睡眠唤醒时，`GPP0` 无法对其下级物理设备执行 ACPI 电源状态恢复，直接触发系统总线死锁。
+- **结论**：严禁对通电已训练的下级 PCIe 桥设备注入 `_STA = 0`。当前本地已完全基于 `fe695b1` 基线重置。
 
-在后续任何调试与修复中，必须无条件遵循以下 5 条红线：
+---
+
+### 2.6 真实统一系统日志（Unified Log）23:50~23:52 秒级死锁铁证链
+通过调取真实控制台系统日志，揭示了睡眠唤醒黑屏的完整诱因链条：
+```text
+【T+0.00s | 23:50:28】用户点击菜单栏「睡眠」
+kernel: PMRD: dark wake entry
+kernel: PMRD: DarkWake: sleepASAP 1, clamshell closed 0, disabled 1/0, desktopMode 0, ac 1
+
+【T+15.0s | 23:50:43】WindowServer 响应超时！
+kernel: PM notification timeout (pid 158, WindowServer) (took 15+ seconds to respond)
+
+【T+91.0s | 23:51:59.669】整整卡滞 90 秒！IOGraphicsFamily 报告 Framebuffer 1 硬件超时！
+kernel: PM priority notification timeout (com.apple.iokit.IOGraphicsFamily)
+kernel: (IOGraphicsFamily) graphics notify timeout (1, 1)
+
+【T+91.02s | 23:51:59.689】核显 Vega 8 的 SMU 与 GC 发生致命崩溃！
+kernel: (AMDRadeonX6000Framebuffer) [6:0:0] [PPLIB] checkTtlErrorMessage() !!! TTL ERROR MESSAGE: 
+{12179422023:[6:0:0] Error SW_IP_CLIENT_ID__SMU: event_id=0xc0201 event_info:type=3 hw_id=0}
+{12307407428:[6:0:0] Error SW_IP_CLIENT_ID__GC: event_id=0xc0100201 event_info:type=3 hw_id=0}
+
+【T+91.50s | 23:52:00.176】系统终于被迫进入睡眠状态（延迟了整整 92 秒！）
+kernel: PMRD: === FINISH (ON_STATE->SLEEP_STATE, 9->0, 0x40c2) gen 2, msg 5, tag 5e0067
+
+【T+115.0s | 23:52:23】硬件唤醒，但核显时钟已经全部归零报废！
+kernel: (AMDRadeonX6000Framebuffer) [6:0:0][GPUCAP] refresh() --- Family: 142, Device: 0x1638
+kernel: CLKS: dcfclk,dcfclk_deep_sleep,dispclk,dppclk,fclk,socclk: 0,0,0,0,0,0
+kernel: CLK1_CLK3_ALLOW_DS,1,dcf_deep_sleep_allow
+
+【T+125.0s | 23:52:33】用户多次轻按键盘（ITE 8258 正常产生击键事件），但屏幕全黑！
+kernel: PMRD: Requesting full wake due to dark wake activity tickle
+kernel: (AMDRadeonX5000) [6:0:0]: channel 24 SDMA0 is hung! (lastReadTimestamp=0x000010f3)
+kernel: (IOAcceleratorFamily2) Trying to restart GPU (AMD Radeon RX Vega 8)...
+kernel: DumpGPURestart(1043)
+```
+
+- **死锁原因定性**：
+  1. **Framebuffer 1 超时**：Index 1 为独显上的 `IONDRVFramebuffer`。因缺乏驱动，它无法应答休眠广播，整整卡死入睡 90 秒；
+  2. **SMU 固件击溃**：超时的入睡过程破坏了核显 PowerPlay 状态，SMU 抛出 `0xc0201`，底层显示时钟全 0；
+  3. **`gpuswitch 2` 自动切换陷阱**：macOS 误以为本设备支持自动双显卡切换，试图在休眠唤醒时调度两张显卡，诱发雪崩。
+  4. **根本方案**：通过注入 `gpu-power-prefs = <01 00 00 00>` 及执行 `sudo pmset -a gpuswitch 0` 锁定单显卡模式，同时修正 `PciRoot(0x0)` 路径，彻底根除双显卡仲裁。
+
+---
+
+## 3. 六大不可逾越的配置红线
+
+在后续任何调试与修复中，必须无条件遵循以下 6 条红线：
 
 1. **【绝对红线】严禁改动或禁用 `UTBMap.kext` 中的 `HS04`**：
    - 联想拯救者物理键盘（ITE 8258）挂载在 `XHC0` 的 `HS04` 上。任何修改都会导致机身物理键盘彻底失效。
@@ -134,6 +195,8 @@
    - 此二者会引入对未驱动独显的总线断电冲击以及 LID0 状态死循环，已被确认为引发总线卡死的诱因。
 5. **【绝对红线】保持 `SSDT-PNLF.aml` 的 `_UID = 19`**：
    - 严禁改回 `_UID = 14`，否则唤醒后背光数值会回到 0.88% 的死黑状态。
+6. **【绝对红线】严禁对通电已训练的下级 PCIe 桥设备注入 `_STA = 0`**：
+   - 在 PCIe 物理硬件链路依然通电握手的情况下（如根桥 `GPP0` 下方的 RTX 3070），严禁使用 ACPI `_STA = 0` 盲目抹除 ACPI 设备节点。这会导致 `AppleACPIPCI` 与根桥硬件脱节，直接造成开机冷启动死锁及唤醒崩溃。必须采用纯软件层（`gpu-power-prefs` 与 `pmset gpuswitch 0`）隔离方案。
 
 ---
 
