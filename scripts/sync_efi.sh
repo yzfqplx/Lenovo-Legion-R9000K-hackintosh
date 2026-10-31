@@ -5,7 +5,8 @@ set -e
 # Lenovo Legion R9000K EFI 同步与备份脚本
 # ==============================================================================
 
-REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 echo "=========================================================="
 echo "  联想拯救者 R9000K (2021) Hackintosh EFI 同步工具"
