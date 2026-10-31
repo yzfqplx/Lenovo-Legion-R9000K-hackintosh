@@ -19,7 +19,7 @@
 | 硬件模块 | 硬件规格与型号 | macOS 驱动方案与状态 |
 | :--- | :--- | :--- |
 | **处理器 (CPU)** | AMD Ryzen 9 5900HX / 7 5800H (8 核 16 线程) | AMD OS X Vanilla Patches (25 项内核补丁，核心数 08) |
-| **集成显卡 (iGPU)** | AMD Radeon RX Vega 8 (1002:1638, Rev c5) | NootedRed (0.9.0-pre.13) + Metal 3 + 2GB 显存分配 |
+| **集成显卡 (iGPU)** | AMD Radeon RX Vega 8 (1002:1638, Rev c5) | NootedRed (0.9.0-pre.14) + Metal 3 + 2GB 显存分配 |
 | **独立显卡 (dGPU)** | NVIDIA GeForce RTX 3070/3080 Laptop (10de:2560) | macOS 无驱动支持，需彻底屏蔽避免争夺总线 |
 | **内建显示屏** | 16.0 英寸 2560x1600 (16:10) 165Hz 京东方 BOE 面板 | 原生 eDP 驱动，支持 Retina HiDPI 缩放与 165Hz |
 | **内存 (RAM)** | 32GB / 64GB DDR4 3200MHz 双通道 | 正常工作 |
