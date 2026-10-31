@@ -10,7 +10,7 @@
 				<key>Comment</key>
 				<string>SSDT-ALS0.aml</string>
 				<key>Enabled</key>
-				<true/>
+				<false/>
 				<key>Path</key>
 				<string>SSDT-ALS0.aml</string>
 			</dict>
@@ -461,6 +461,26 @@
 	<dict>
 		<key>Add</key>
 		<dict>
+			<key>PciRoot(0x0)/Pci(0x1,0x1)/Pci(0x0,0x0)</key>
+			<dict>
+				<key>IOName</key>
+				<string>#display</string>
+				<key>class-code</key>
+				<data>
+				/////w==
+				</data>
+				<key>name</key>
+				<data>
+				I2Rpc3BsYXkA
+				</data>
+			</dict>
+			<key>PciRoot(0x0)/Pci(0x1,0x1)/Pci(0x0,0x1)</key>
+			<dict>
+				<key>class-code</key>
+				<data>
+				/////w==
+				</data>
+			</dict>
 			<key>PciRoot(0x0)/Pci(0x2,0x4)/Pci(0x0,0x0)</key>
 			<dict>
 				<key>built-in</key>
@@ -474,6 +494,10 @@
 			</dict>
 			<key>PciRoot(0x0)/Pci(0x8,0x1)/Pci(0x0,0x0)</key>
 			<dict>
+				<key>disable-agdc</key>
+				<data>
+				AQAAAA==
+				</data>
 				<key>model</key>
 				<string>AMD Radeon RX Vega 8</string>
 			</dict>
@@ -770,7 +794,7 @@
 				<key>Comment</key>
 				<string>Light sensor support</string>
 				<key>Enabled</key>
-				<true/>
+				<false/>
 				<key>ExecutablePath</key>
 				<string>Contents/MacOS/SMCLightSensor</string>
 				<key>MaxKernel</key>
