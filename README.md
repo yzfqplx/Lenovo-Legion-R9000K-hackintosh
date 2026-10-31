@@ -77,8 +77,12 @@
   2026-10-31 18:07:39.993214+0800 kernel: PMRD: kIOMessageSystemCapabilityChange[14] to com.apple.driver.AGPM
   2026-10-31 18:07:39.993216+0800 kernel: PMRD: kIOMessageSystemCapabilityChange[15] to com.apple.driver.AGPM
   ```
-- **解决机制（路线 A 落地）**：
-  引入 Dortania 官方规范的 `SSDT-GPU-DISABLE.aml`，利用 ACPI `_DSM` 针对 `\_SB.PCI0.GPP0.PEGP` 和 `\_SB.PCI0.GPP0.NHDA` 注入 `class-code: 0xFFFFFFFF`、`name: #display`。这样 `IOPCIFamily` 不会将其视作图形/音频设备，彻底阻断 `IONDRVFramebuffer` 与 `AGPM` 加载，同时不触碰硬件电源轨（不调用 `_OFF`），避免总线掉线与风扇狂转。
+- **解决机制（路线 A 演进与落地）**：
+  最初尝试 `_DSM` 伪装时，开机内核日志暴露了联想原厂固件为支持 Advanced Optimus 已存在原生 `_DSM`，导致抛出 `AE_ALREADY_EXISTS` 异常并丢弃补丁。随后尝试 `Method (_STA, 0)` 隐身屏蔽法，虽然抹除了 ACPI 节点，但物理 PCIe 链路依然通电，导致 `AppleACPIPCI` 与根桥 `GPP0` 电源状态脱节而在开机/唤醒时卡死。
+  最终确立**纯软件层面的单显卡锁定与环境隔离方案**（完全规避触摸硬件物理电源轨）：
+  1. 在 `config.plist` NVRAM 注入 Apple 原生 `gpu-power-prefs = <01 00 00 00>`，强制锁定 Integrated GPU 独占模式，阻断系统级独显调度；
+  2. 在系统层执行 `sudo pmset -a gpuswitch 0`，将电源管理器永久锁定为仅集成显卡，彻底消除 `gpuswitch 2` 自动双显卡切换仲裁死锁；
+  3. 将 `config.plist` 中 `SSDT-GPU-DISABLE.aml` 设为 `Enabled: False`，彻底消除 `AE_ALREADY_EXISTS` 报错与桥设备仲裁风险。
 
 #### 核心根因 2：`darkwake=1` 引发电源门控强行钳制屏幕与 Framebuffer（致命诱因！）
 - **日志确诊数据（2026-10-31 18:07:40 - 18:07:46）**：
@@ -135,18 +139,18 @@
 
 ## 4. 修复实施进展与行动状态
 
-### 路线 A：以非侵入方式安全屏蔽 NVIDIA 独显（✅ 已完成落地）
-- **实施方案**：创建并编译标准 Dortania 规范 ACPI 热补丁 `SSDT-GPU-DISABLE.aml`，挂载在 `OC/ACPI/` 并在 `config.plist` 中启用。
-- **作用对象**：
-  - `\_SB.PCI0.GPP0.PEGP`（独显本体 RTX 3070/3080）
-  - `\_SB.PCI0.GPP0.NHDA`（独显伴生音频 HDA）
-- **效果**：利用 `_DSM` 伪装 `class-code: 0xFFFFFFFF` 和 `name: #display`，阻断 `IONDRVFramebuffer`、`AGPM`、`AppleHDAController` 加载，同时避免调用 `_OFF()` 引发断电总线风暴与风扇狂转。
+### 路线 A：以非侵入方式安全隔离 NVIDIA 独显（✅ 已完成落地）
+- **实施方案**：
+  1. 在 `OC/config.plist` 的 `NVRAM -> Add -> 7C436110-AB2A-4BBB-A880-FE41995C9F82` 中注入 `gpu-power-prefs = <01 00 00 00>`（并在 `Delete` 数组中添加对应项），开机强制锁定单显卡模式；
+  2. 在 `OC/config.plist` 中将 `DeviceProperties` 的根桥统一修正为正确的 `PciRoot(0x0)`；
+  3. 禁用报错的 `SSDT-GPU-DISABLE.aml`（设为 `Enabled: False`），消除 `AE_ALREADY_EXISTS` 报错与总线冲突；
+  4. 进入 macOS 后执行 `sudo pmset -a gpuswitch 0`，将系统 `GPUSwitch` 设为 0（仅集成显卡），彻底终结 `gpuswitch 2` 导致的 90 秒 `graphics notify timeout (1, 1)` 与多卡仲裁死锁。
 
 ### 路线 B：解决 Vega 8 唤醒显示时钟解冻（✅ 已完成落地）
 - **实施方案**：
-  1. 将引导参数中的 `darkwake=1` 更改为 **`darkwake=0`**，彻底根除唤醒瞬间由电源管理器发起的 `power clamped IODisplayWrangler ps 4->0` 和 `power clamped ATY,RadeonFramebuffer ps 2->1` 低功耗死锁！
+  1. 引导参数保持 **`darkwake=0`**，禁止暗中唤醒，任何唤醒立即执行 Full Wake，将显示协调器释放至 `ps 4`；
   2. 保持 `-NRedDPDelay` 提供 165Hz 高刷屏 eDP 链路握手缓冲；
-  3. 清理已废弃与无效的启动参数（如 `-NRedGLFix`、`-NRedVDA` 及临时测试参数 `-NRedNoFVRC`）。
+  3. 清理已废弃与无效的启动参数。
 
 ### 路线 C：BIOS 固件与电源管理协同（按需核对）
 - **检查项**：
@@ -154,7 +158,7 @@
      - 确保睡眠模式为真正的 **S3 (Suspend to RAM)**，而非 Modern Standby (S0ix)；
      - 确保集成显卡显存 **UMA Frame Buffer Size** 固定为 **2GB 或 4GB**（切勿保持 Auto 或 512MB）；
      - 确保开启 **Above 4G Decoding** 并关闭 **CSM**。
-  2. 系统电源参数优化：已配置 `pmset -a hibernatemode 0 standby 0 powernap 0 tcpkeepalive 0`。
+  2. 系统电源参数优化：配置 `sudo pmset -a gpuswitch 0 hibernatemode 0 standby 0 powernap 0 tcpkeepalive 0`。
 
 ---
 
@@ -165,7 +169,7 @@
 - ✅ **网络连接**：Intel AX200 Wi-Fi 正常上网，蓝牙 5.2 正常连接配对，Realtek 千兆有线网卡即插即用。
 - ✅ **声音与外放**：ALC287 耳机正常，Cirrus Logic CS35L41 双智能功放驱动机身扬声器正常发声。
 - ✅ **电池与传感器**：电池电量与充放电状态正常，CPU 各核心温度与功耗实时监控正常。
-- ⏳ **睡眠与唤醒**：入睡正常，独显已完成 ACPI 屏蔽，DarkWake 门控已解冻，等待同步 EFI 并重启测试。
+- ⏳ **睡眠与唤醒**：入睡正常，单显卡模式已锁定，等待同步 EFI 并测试验证。
 
 ---
 
@@ -178,8 +182,12 @@ keepsyms=1 debug=0x100 -vi2c-force-polling -v alcid=13 revpatch=sbvmm -NRedDispl
 
 > [!IMPORTANT]
 > **生效与验证步骤**：
-> 1. 执行 `sudo ./scripts/sync_efi.sh` 将仓库中最新的 `OC/config.plist` 和 `OC/ACPI/`（含 `SSDT-GPU-DISABLE.aml` 及 `SSDT-PNLF.aml`）同步至引导分区；
-> 2. 重启机器，在 OpenCore 引导选单界面按空格键，选中并执行 **【Reset NVRAM】**；
+> 1. 执行 `./scripts/sync_efi.sh` 将仓库中最新的 `OC/config.plist` 同步至引导分区；
+> 2. 在 macOS 终端执行电源模式锁定：
+>    ```bash
+>    sudo pmset -a gpuswitch 0
+>    ```
+> 3. 重启机器测试唤醒与开机流畅度。
 > 3. 进入系统后，在终端验证：
 >    - `ioreg -p IOService -c IONDRVFramebuffer` 结果应为空（独显已彻底静默）；
 >    - `ioreg -p IOACPIPlane -n PNLF -l | grep UID` 应显示 `_UID = "19"`；

@@ -90,7 +90,7 @@
 				<key>Comment</key>
 				<string>Disable discrete NVIDIA RTX GPU and Audio (PEGP &amp; NHDA)</string>
 				<key>Enabled</key>
-				<true/>
+				<false/>
 				<key>Path</key>
 				<string>SSDT-GPU-DISABLE.aml</string>
 			</dict>
@@ -469,14 +469,7 @@
 	<dict>
 		<key>Add</key>
 		<dict>
-			<key>PciRoot(0x1)/Pci(0x2,0x2)/Pci(0x0,0x0)</key>
-			<dict>
-				<key>built-in</key>
-				<data>
-				AQ==
-				</data>
-			</dict>
-			<key>PciRoot(0x1)/Pci(0x2,0x4)/Pci(0x0,0x0)</key>
+			<key>PciRoot(0x0)/Pci(0x1,0x2)/Pci(0x0,0x0)</key>
 			<dict>
 				<key>built-in</key>
 				<data>
@@ -487,7 +480,14 @@
 				AAAAAAAAAAA=
 				</data>
 			</dict>
-			<key>PciRoot(0x1)/Pci(0x8,0x1)/Pci(0x0,0x0)</key>
+			<key>PciRoot(0x0)/Pci(0x2,0x2)/Pci(0x0,0x0)</key>
+			<dict>
+				<key>built-in</key>
+				<data>
+				AQ==
+				</data>
+			</dict>
+			<key>PciRoot(0x0)/Pci(0x8,0x1)/Pci(0x0,0x0)</key>
 			<dict>
 				<key>model</key>
 				<string>AMD Radeon RX Vega 8</string>
@@ -2343,6 +2343,10 @@
 				<data>
 				AwgAAA==
 				</data>
+				<key>gpu-power-prefs</key>
+				<data>
+				AQAAAA==
+				</data>
 				<key>run-efi-updater</key>
 				<string>No</string>
 			</dict>
@@ -2362,6 +2366,7 @@
 				<string>csr-active-config</string>
 				<string>bluetoothExternalDongleFailed</string>
 				<string>bluetoothInternalControllerInfo</string>
+				<string>gpu-power-prefs</string>
 			</array>
 		</dict>
 		<key>LegacyOverwrite</key>
