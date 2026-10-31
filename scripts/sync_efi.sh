@@ -19,12 +19,18 @@ EFI_MOUNT=$(mount | grep "$EFI_DEV" | awk -F ' on ' '{print $2}' | awk -F ' \\('
 
 if [ -z "$EFI_MOUNT" ]; then
     echo "未检测到已挂载的分区，正在尝试挂载 $EFI_DEV ..."
-    if ! diskutil mount "$EFI_DEV"; then
-        sudo mkdir -p "/Volumes/EFI"
-        sudo mount -t msdos "$EFI_DEV" "/Volumes/EFI"
+    if [ "$(id -u)" -eq 0 ]; then
+        mkdir -p "/Volumes/EFI"
+        mount -t msdos "$EFI_DEV" "/Volumes/EFI"
         EFI_MOUNT="/Volumes/EFI"
     else
-        EFI_MOUNT=$(mount | grep "$EFI_DEV" | awk -F ' on ' '{print $2}' | awk -F ' \\(' '{print $1}')
+        if ! diskutil mount "$EFI_DEV"; then
+            sudo mkdir -p "/Volumes/EFI"
+            sudo mount -t msdos "$EFI_DEV" "/Volumes/EFI"
+            EFI_MOUNT="/Volumes/EFI"
+        else
+            EFI_MOUNT=$(mount | grep "$EFI_DEV" | awk -F ' on ' '{print $2}' | awk -F ' \\(' '{print $1}')
+        fi
     fi
 fi
 
