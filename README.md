@@ -173,7 +173,7 @@
 
 当前基线 `boot-args`：
 ```text
-keepsyms=1 debug=0x100 -vi2c-force-polling -v alcid=13 revpatch=sbvmm -NRedDPDelay -amfipassbeta -btlfxboardid -cirrusssid=0x17AA3847 -utbappleoff tlbto_us=0 darkwake=0
+keepsyms=1 debug=0x100 -vi2c-force-polling -v alcid=13 revpatch=sbvmm -NRedDisplayFix -NRedVideoFix -NRedDPDelay -amfipassbeta -btlfxboardid -cirrusssid=0x17AA3847 tlbto_us=0 darkwake=0
 ```
 
 > [!IMPORTANT]
