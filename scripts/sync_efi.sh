@@ -49,11 +49,16 @@ if [ -d "$EFI_MOUNT/EFI/BOOT" ]; then
     cp -R "$EFI_MOUNT/EFI/BOOT" "$BACKUP_PATH/"
 fi
 
-# 2. 同步仓库最新的 ACPI 表和 config.plist
+# 2. 同步仓库最新的 ACPI 表、config.plist 以及 NootedRed.kext
 echo "正在同步最新 ACPI 表和 config.plist ..."
 mkdir -p "$EFI_MOUNT/EFI/OC/ACPI"
 cp -f "$REPO_DIR/OC/config.plist" "$EFI_MOUNT/EFI/OC/config.plist"
 cp -f "$REPO_DIR/OC/ACPI/"*.aml "$EFI_MOUNT/EFI/OC/ACPI/"
+
+echo "正在同步 NootedRed.kext 驱动 ..."
+mkdir -p "$EFI_MOUNT/EFI/OC/Kexts"
+rm -rf "$EFI_MOUNT/EFI/OC/Kexts/NootedRed.kext"
+cp -R "$REPO_DIR/OC/Kexts/NootedRed.kext" "$EFI_MOUNT/EFI/OC/Kexts/"
 
 # 3. 清理可能产生的 .DS_Store / ._* 垃圾文件
 find "$EFI_MOUNT/EFI" \( -name ".DS_Store" -o -name "._*" \) -delete 2>/dev/null || true

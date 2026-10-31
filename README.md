@@ -146,7 +146,7 @@
 - **实施方案**：
   1. 将引导参数中的 `darkwake=1` 更改为 **`darkwake=0`**，彻底根除唤醒瞬间由电源管理器发起的 `power clamped IODisplayWrangler ps 4->0` 和 `power clamped ATY,RadeonFramebuffer ps 2->1` 低功耗死锁！
   2. 保持 `-NRedDPDelay` 提供 165Hz 高刷屏 eDP 链路握手缓冲；
-  3. 保持 `-NRedNoFVRC` 防止显存任务队列死锁。
+  3. 清理已废弃与无效的启动参数（如 `-NRedGLFix`、`-NRedVDA` 及临时测试参数 `-NRedNoFVRC`）。
 
 ### 路线 C：BIOS 固件与电源管理协同（按需核对）
 - **检查项**：
@@ -173,7 +173,7 @@
 
 当前基线 `boot-args`：
 ```text
-keepsyms=1 debug=0x100 -vi2c-force-polling -v alcid=13 revpatch=sbvmm -NRedDPDelay -NRedGLFix -NRedVDA -amfipassbeta -btlfxboardid -cirrusssid=0x17AA3847 -utbappleoff tlbto_us=0 -NRedNoFVRC darkwake=0
+keepsyms=1 debug=0x100 -vi2c-force-polling -v alcid=13 revpatch=sbvmm -NRedDPDelay -amfipassbeta -btlfxboardid -cirrusssid=0x17AA3847 -utbappleoff tlbto_us=0 darkwake=0
 ```
 
 > [!IMPORTANT]
