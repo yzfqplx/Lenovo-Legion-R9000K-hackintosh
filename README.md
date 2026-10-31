@@ -204,10 +204,11 @@ kernel: DumpGPURestart(1043)
 
 ### 路线 A：以非侵入方式安全隔离 NVIDIA 独显（✅ 已完成落地）
 - **实施方案**：
-  1. 在 `OC/config.plist` 的 `NVRAM -> Add -> 7C436110-AB2A-4BBB-A880-FE41995C9F82` 中注入 `gpu-power-prefs = <01 00 00 00>`（并在 `Delete` 数组中添加对应项），开机强制锁定单显卡模式；
-  2. 在 `OC/config.plist` 中将 `DeviceProperties` 的根桥统一修正为正确的 `PciRoot(0x0)`；
-  3. 禁用报错的 `SSDT-GPU-DISABLE.aml`（设为 `Enabled: False`），消除 `AE_ALREADY_EXISTS` 报错与总线冲突；
-  4. 进入 macOS 后执行 `sudo pmset -a gpuswitch 0`，将系统 `GPUSwitch` 设为 0（仅集成显卡），彻底终结 `gpuswitch 2` 导致的 90 秒 `graphics notify timeout (1, 1)` 与多卡仲裁死锁。
+  1. 在 `OC/config.plist` 的 `DeviceProperties -> Add` 中对独显及其伴生音频节点（`PciRoot(0x0)/Pci(0x1,0x1)/Pci(0x0,0x0)` 及 `.../Pci(0x0,0x1)`）注入 `class-code: 0xFFFFFFFF`、`name: #display`、`IOName: #display`，从驱动匹配源头彻底阻断 `IONDRVSupport.kext` 挂载 `IONDRVFramebuffer`，根除休眠 90 秒超时；
+  2. 在 `OC/config.plist` 的 `NVRAM -> Add -> 7C436110-AB2A-4BBB-A880-FE41995C9F82` 中注入 `gpu-power-prefs = <01 00 00 00>`（并在 `Delete` 数组中添加对应项），开机强制锁定单显卡模式；
+  3. 在 `boot-args` 中追加 `-wegnoegpu` 辅助参数；
+  4. 保持禁用报错的 `SSDT-GPU-DISABLE.aml`（设为 `Enabled: False`），消除 `AE_ALREADY_EXISTS` 报错与总线冲突；
+  5. 进入 macOS 后执行 `sudo pmset -a gpuswitch 0`，将系统 `GPUSwitch` 设为 0（仅集成显卡），彻底终结 `gpuswitch 2` 导致的多卡仲裁死锁。
 
 ### 路线 B：解决 Vega 8 唤醒显示时钟解冻（✅ 已完成落地）
 - **实施方案**：
@@ -240,7 +241,7 @@ kernel: DumpGPURestart(1043)
 
 当前基线 `boot-args`：
 ```text
-keepsyms=1 debug=0x100 -vi2c-force-polling -v alcid=13 revpatch=sbvmm -NRedDisplayFix -NRedVideoFix -NRedDPDelay -amfipassbeta -btlfxboardid -cirrusssid=0x17AA3847 tlbto_us=0 darkwake=0
+keepsyms=1 debug=0x100 -vi2c-force-polling -v alcid=13 revpatch=sbvmm -NRedDisplayFix -NRedVideoFix -NRedDPDelay -amfipassbeta -btlfxboardid -cirrusssid=0x17AA3847 tlbto_us=0 darkwake=0 -wegnoegpu
 ```
 
 > [!IMPORTANT]
