@@ -53,7 +53,7 @@
    - **铁律**：`UTBMap.kext` 中 `XHC0` 的 `HS04` 必须永久保持启用。
 4. **TSC 跨核心时钟同步选型**：
    - **分析**：用户及部分讨论曾提及 `CpuTscSync.kext`。经源码反编译与 Acidanthera 规范核对，`CpuTscSync` 是专门读取 Intel 专属的 `MSR_IA32_TSC_ADJUST (0x3B)` 寄存器进行时钟对齐的，在 AMD 平台上无效。
-   - **结论**：AMD Ryzen 平台必须且只能使用 `AmdTscSync.kext`（v2.0.0，针对 8 核 16 线程精准配置 `IOCPUNumber=15`）。
+   - **结论**：现采用支持 AMD/Intel 全架构的现代同步驱动 `ForgedInvariant.kext`（v1.5.0，ChefKiss 开发，动态跨核心对齐同步），全面取代了需要硬编码核心数 `IOCPUNumber` 的老旧 `AmdTscSync.kext`。
 5. **背光调节 UID 严重偏差**：
    - **分析**：此前 `SSDT-PNLF.aml` 曾被误设置为 Intel 风格的 `_UID = 14`，导致唤醒后 AppleBacklight 将亮度重置为 `16/1808`（0.88% 极暗黑屏，肉眼无法察觉）。
    - **解决**：已恢复 `SSDT-PNLF.aml` 的 `_UID = 19`（`0x13`），匹配 AMD 曲线。在 IORegistry 中验证 `AppleRestoreBacklight = 123`，`ApplePanelRawBrightness = 38930`（最大 65403），证明背光本身数值已恢复正常。
@@ -244,8 +244,8 @@ kernel: DumpGPURestart(1043)
    - 联想拯救者物理键盘（ITE 8258）挂载在 `XHC0` 的 `HS04` 上。任何修改都会导致机身物理键盘彻底失效。
 2. **【绝对红线】严禁在 OpenCore ACPI 二进制补丁中使用 `Base` 限定**：
    - 所有在 `ACPI -> Patch` 中的补丁（如 `_PRW to XPRW`），`Base` 属性必须保持为空字符串 `""`。填写类似 `\_SB.PCI0` 会直接导致 OpenCore 引导器在启动界面前卡死。
-3. **【绝对红线】严禁替换 `AmdTscSync.kext` 为 `CpuTscSync.kext`**：
-   - 本机为 AMD 处理器，`CpuTscSync` 只支持 Intel 寄存器，使用它会导致多核心时钟失步而崩溃。
+3. **【绝对红线】严禁使用仅支持 Intel 的 `CpuTscSync.kext`**：
+   - 本机为 AMD 处理器，`CpuTscSync` 只支持 Intel 寄存器，使用它会导致多核心时钟失步而开机卡死。应使用支持 AMD 架构的 `ForgedInvariant.kext`。
 4. **【绝对红线】保持 `SSDT-PTSWAK.aml` 与 `SSDT-EXT3-WSC.aml` 处于禁用状态**：
    - 此二者会引入对未驱动独显的总线断电冲击以及 LID0 状态死循环，已被确认为引发总线卡死的诱因。
 5. **【绝对红线】保持 `SSDT-PNLF.aml` 的 `_UID = 19`**：
