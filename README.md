@@ -181,9 +181,64 @@ kernel: DumpGPURestart(1043)
 
 ---
 
-## 3. 六大不可逾越的配置红线
+### 2.7 独显隔离落地验证（1.7s 入睡）与方案 A（纯息屏测试）终极诊断
+- **独显隔离验证完成（100% 达标）**：
+  在 `PciRoot(0x0)` 注入 `class-code: 0xFFFFFFFF` 并追加 `-wegnoegpu` 后，`ioreg -rn IONDRVFramebuffer` 输出彻底为空，系统入睡等待时间从原先的 **122 秒断崖式下降至 1.7 秒**，独显总线争夺已彻底根除。
+- **方案 A 实测（`sleep 0 displaysleep 1` 排除 S3 挂起干扰）**：
+  在保持 CPU、内核、网络、磁盘 100% 运行的前提下，排查仅由显示服务息屏引起的唤醒问题：
+  1. **屏幕闲置变暗待机（`ps 4 -> ps 1`）**：
+     轻敲键盘或晃动鼠标，屏幕**瞬间毫秒级秒醒（`ps 1 -> ps 4`）**，Metal 渲染与时钟完全正常！
+  2. **屏幕超时断电（`ps 1 -> ps 0`）**：
+     息屏进入 `PowerState 0` 仅仅 17ms 后，`AMDRadeonX6000Framebuffer` 抛出：
+     `Error SW_IP_CLIENT_ID__SMU: event_id=0xc0201`
+     `Error SW_IP_CLIENT_ID__GC:  event_id=0xc0100201`
+  3. **唤醒点亮受挫**：
+     用户按键唤醒时，驱动抛出 `Error PSP: event_id=0x140401 [FW] psp_cmd_km_fence_wait: fence timed out`，紧接着 `psp_dtm_load: failed`，最终驱动报告 `AmdRadeonFramebuffer::setCursorImage() !!! Driver is offline`，时钟死锁为 0。
+- **定性结论**：
+  彻底洗清 S3 挂起、CPU 电源管理、USB 映射、ACPI 补丁等所有外围嫌疑。**根因精准锁定在：macOS 独显驱动栈在针对 AMD Cezanne APU 进行 `PowerState 0` 电源门控时，发送了独显级别的切电指令，遭到 APU SMU 拒绝而死锁。**
 
-在后续任何调试与修复中，必须无条件遵循以下 6 条红线：
+---
+
+### 2.8 苹果驱动内核逆向真相：为什么注入 CAIL 属性完全无效？
+- **逆向分析**：
+  检索 macOS Sequoia 系统内核集合镜像（`SystemKernelExtensions.kc`），发现原生驱动中**根本不存在** `CAIL_DisablePowerGating` 或 `CAIL_DisableRlcSmuPGHandshake` 这类字符串！
+- **概念混淆辨析**：
+  这些属性源于 Linux AMDGPU 内核驱动参数或 Windows 注册表，苹果的 `AMDRadeonX5000` / `AMDRadeonX6000Framebuffer` 从未定义或查询过这些键。注入到 OpenCore 的 `DeviceProperties` 完全等同于空操作，无法阻止驱动执行 `ps 0` 切电。
+- **二进制篡改教训**：
+  Commit `7c06650` 曾试图强行篡改驱动二进制内部的时钟门控常量，结果直接导致系统冷启动时钟树初始化断言恐慌，已被列入不可逾越的配置红线。
+
+---
+
+### 2.9 唤醒深层硬件死锁暴露：Stamp Timeout for KIQ Submission 与 Cezanne 全球社区共识
+- **深层硬件超时日志（08:59 主动休眠与合盖测试）**：
+  在系统触发休眠（Software Sleep / 合盖）后，开盖与按键唤醒捕获到底层微引擎初始化崩溃：
+  ```text
+  09:00:19 kernel: (AMDRadeonX5000) >>> Calling TTL::powerUp()
+  09:00:19 kernel: (AMDRadeonX5000HWLibs) Write PCI Config offset 0x60 size 2 data 0x100
+  09:00:19 kernel: (AMDRadeonX5000HWLibs) smu_event_notify began
+  09:00:30 kernel: (AMDRadeonX5000) Stamp Timeout for KIQ Submission!
+  09:00:30 kernel: (AMDRadeonX5000) [6:0:0]: Error: MicroEngine Initiailization failed.
+  ```
+  - **`KIQ (Kernel Interface Queue)`**：显卡驱动用来与硬件调度核心（CP / RLC 微引擎）通信的核心通道。
+  - 唤醒时驱动发出的命令队列因硬件未应答而发生 10 秒超时（Stamp Timeout），导致显卡微引擎彻底初始化失败。
+- **全社区与孪生机型共识**：
+  无论是 NootedRed 官方版还是 `steve12311` 维护的 fork 分支，Cezanne APU（Ryzen 5000 移动端核显）从深度切电状态复活微引擎都是目前整个 Hackintosh 社区尚未攻克的底层硬伤。
+  在孪生机型开源仓库（如 `long-zuyang/Lenovo-R9000P2021H-Hackintosh`）中，社区维护者一致给出准则：
+  > **“关闭睡眠模式以及屏幕保护模式，把这些都调到‘永不’，否则睡眠会引起系统崩溃。”**
+- **终极避坑与生产力最佳实践**：
+  1. **彻底关闭休眠能力（防合盖与误触睡死）**：
+     ```bash
+     sudo pmset -a disablesleep 1
+     ```
+     在内核层屏蔽 S3 睡眠与深度息屏。合盖、误点睡眠仅触发锁屏和关闭背景消耗，**绝不切断显卡微引擎供电**，开盖按任意键永远秒醒，告别长按电源键强制重启！
+  2. **闲置防烧与离席保护**：
+     执行 `sudo pmset -a displaysleep 0 sleep 0`，离席使用快捷键 <kbd>Control</kbd> + <kbd>Command</kbd> + <kbd>Q</kbd> 锁屏，兼顾数据安全与极致稳定。
+
+---
+
+## 3. 七大不可逾越的配置红线
+
+在后续任何调试与修复中，必须无条件遵循以下 7 条红线：
 
 1. **【绝对红线】严禁改动或禁用 `UTBMap.kext` 中的 `HS04`**：
    - 联想拯救者物理键盘（ITE 8258）挂载在 `XHC0` 的 `HS04` 上。任何修改都会导致机身物理键盘彻底失效。
@@ -197,6 +252,8 @@ kernel: DumpGPURestart(1043)
    - 严禁改回 `_UID = 14`，否则唤醒后背光数值会回到 0.88% 的死黑状态。
 6. **【绝对红线】严禁对通电已训练的下级 PCIe 桥设备注入 `_STA = 0`**：
    - 在 PCIe 物理硬件链路依然通电握手的情况下（如根桥 `GPP0` 下方的 RTX 3070），严禁使用 ACPI `_STA = 0` 盲目抹除 ACPI 设备节点。这会导致 `AppleACPIPCI` 与根桥硬件脱节，直接造成开机冷启动死锁及唤醒崩溃。必须采用纯软件层（`gpu-power-prefs` 与 `pmset gpuswitch 0`）隔离方案。
+7. **【绝对红线】严禁直接 Hex 逆向篡改驱动二进制中的内嵌 XML/时钟门控（如 `CAIL_DisableAllClockGating`）**：
+   - 苹果原生 AMD 驱动不支持未公开的 Linux CAIL 参数；修改二进制会导致冷启动阶段显卡时钟树初始化断言崩溃（已在 Commit `7c06650` 得到深刻教训）。
 
 ---
 
@@ -204,23 +261,23 @@ kernel: DumpGPURestart(1043)
 
 ### 路线 A：以非侵入方式安全隔离 NVIDIA 独显（✅ 已完成落地）
 - **实施方案**：
-  1. 在 `OC/config.plist` 的 `DeviceProperties -> Add` 中对独显及其伴生音频节点（`PciRoot(0x0)/Pci(0x1,0x1)/Pci(0x0,0x0)` 及 `.../Pci(0x0,0x1)`）注入 `class-code: 0xFFFFFFFF`、`name: #display`、`IOName: #display`，从驱动匹配源头彻底阻断 `IONDRVSupport.kext` 挂载 `IONDRVFramebuffer`，根除休眠 90 秒超时；
+  1. 在 `OC/config.plist` 的 `DeviceProperties -> Add` 中对独显及其伴生音频节点（`PciRoot(0x0)/Pci(0x1,0x1)/Pci(0x0,0x0)` 及 `.../Pci(0x0,0x1)`）注入 `class-code: 0xFFFFFFFF`、`name: #display`、`IOName: #display`，从驱动匹配源头彻底阻断 `IONDRVSupport.kext` 挂载 `IONDRVFramebuffer`，根除休眠 90 秒超时（休眠入睡耗时降至 1.7 秒）；
   2. 在 `OC/config.plist` 的 `NVRAM -> Add -> 7C436110-AB2A-4BBB-A880-FE41995C9F82` 中注入 `gpu-power-prefs = <01 00 00 00>`（并在 `Delete` 数组中添加对应项），开机强制锁定单显卡模式；
   3. 在 `boot-args` 中追加 `-wegnoegpu` 辅助参数；
   4. 保持禁用报错的 `SSDT-GPU-DISABLE.aml`（设为 `Enabled: False`），消除 `AE_ALREADY_EXISTS` 报错与总线冲突；
   5. 进入 macOS 后执行 `sudo pmset -a gpuswitch 0`，将系统 `GPUSwitch` 设为 0（仅集成显卡），彻底终结 `gpuswitch 2` 导致的多卡仲裁死锁。
 
-### 路线 B：解决 Vega 8 唤醒显示时钟解冻（✅ 已完成落地）
+### 路线 B：解决 Vega 8 唤醒显示时钟解冻与日常防睡死（✅ 已完成落地）
 - **实施方案**：
   1. 引导参数保持 **`darkwake=0`**，禁止暗中唤醒，任何唤醒立即执行 Full Wake，将显示协调器释放至 `ps 4`；
   2. 保持 `-NRedDPDelay` 提供 165Hz 高刷屏 eDP 链路握手缓冲；
-  3. 清理已废弃与无效的启动参数。
+  3. 执行 `sudo pmset -a disablesleep 1 displaysleep 0 sleep 0`，彻底关闭底层易崩溃的 APU 微引擎断电休眠，保障日常工作不关机稳定性。
 
 ### 路线 C：BIOS 固件与电源管理协同（按需核对）
 - **检查项**：
   1. 使用 UMAF 工具进 BIOS 检查：
      - 确保睡眠模式为真正的 **S3 (Suspend to RAM)**，而非 Modern Standby (S0ix)；
-     - 确保集成显卡显存 **UMA Frame Buffer Size** 固定为 **2GB 或 4GB**（切勿保持 Auto 或 512MB）；
+     - 确保集成显卡显存 **UMA Frame Buffer Size** 固定为 **2GB 或 4GB**（切勿保持 Auto 或 512MB，以防止核显资源耗尽）；
      - 确保开启 **Above 4G Decoding** 并关闭 **CSM**。
   2. 系统电源参数优化：配置 `sudo pmset -a gpuswitch 0 hibernatemode 0 standby 0 powernap 0 tcpkeepalive 0`。
 
@@ -233,7 +290,7 @@ kernel: DumpGPURestart(1043)
 - ✅ **网络连接**：Intel AX200 Wi-Fi 正常上网，蓝牙 5.2 正常连接配对，Realtek 千兆有线网卡即插即用。
 - ✅ **声音与外放**：ALC287 耳机正常，Cirrus Logic CS35L41 双智能功放驱动机身扬声器正常发声。
 - ✅ **电池与传感器**：电池电量与充放电状态正常，CPU 各核心温度与功耗实时监控正常。
-- ⏳ **睡眠与唤醒**：入睡正常，单显卡模式已锁定，等待同步 EFI 并测试验证。
+- ⚠️ **睡眠与唤醒**：因 AMD Cezanne APU 架构下苹果驱动在 `ps 0` / S3 唤醒时存在硬件微引擎超时死锁（KIQ Stamp Timeout，社区通用已知局限），推荐日常配置 `sudo pmset -a disablesleep 1 displaysleep 0 sleep 0`。屏幕变暗（`ps 1`）秒醒，合盖开盖秒回桌面，实现极致全天候稳定。
 
 ---
 
@@ -247,12 +304,13 @@ keepsyms=1 debug=0x100 -vi2c-force-polling -v alcid=13 revpatch=sbvmm -NRedDispl
 > [!IMPORTANT]
 > **生效与验证步骤**：
 > 1. 执行 `./scripts/sync_efi.sh` 将仓库中最新的 `OC/config.plist` 同步至引导分区；
-> 2. 在 macOS 终端执行电源模式锁定：
+> 2. 在 macOS 终端执行电源模式锁定与防睡死设置：
 >    ```bash
 >    sudo pmset -a gpuswitch 0
+>    sudo pmset -a disablesleep 1 displaysleep 0 sleep 0
 >    ```
-> 3. 重启机器测试唤醒与开机流畅度。
-> 3. 进入系统后，在终端验证：
+> 3. 重启机器测试唤醒与开机流畅度；
+> 4. 进入系统后，在终端验证：
 >    - `ioreg -p IOService -c IONDRVFramebuffer` 结果应为空（独显已彻底静默）；
 >    - `ioreg -p IOACPIPlane -n PNLF -l | grep UID` 应显示 `_UID = "19"`；
-> 4. 点击苹果菜单 ->「睡眠」，观察呼吸灯进入平缓闪烁后，轻按任意键测试唤醒亮屏。
+> 5. 日常使用合盖或按快捷键 <kbd>Control</kbd> + <kbd>Command</kbd> + <kbd>Q</kbd> 锁屏离席，开盖按任意键秒醒。
