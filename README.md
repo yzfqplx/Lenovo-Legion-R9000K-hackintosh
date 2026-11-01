@@ -66,6 +66,9 @@
 8. **`config.plist` 中的 `PciRoot(0x1)` 虚假路径陷阱**：
    - **教训**：此前在 `DeviceProperties` 中配置的设备均位于 `PciRoot(0x1)` 下。根据 IORegistry 严谨审查，本机全部设备（核显、NVMe、独显）的 ACPI 根桥全为 `PCI0`（`_UID = 0`），即 `PciRoot(0x0)`，导致此前注入的属性完全失效。
    - **解决**：已将所有路径修正为真实的 `PciRoot(0x0)`。
+9. **`SSDT-HPET` 与原厂 DSDT `_STA` 重复定义报错**：
+   - **教训**：在 `ACPI -> Add` 中启用了 `SSDT-HPET.aml` 及 `_CRS to XCRS`，但未配置 `_STA to XSTA`，导致开机抛出 `ACPI Error: [_STA] Namespace lookup failure, AE_ALREADY_EXISTS (SSDT: HPET)` 并直接拒载全表，进而引发 `(AppleHPET) HPET: map device registers failed`。
+   - **解决**：AMD Zen 3 架构原生采用 APIC/TSC 时钟体系，无 Intel 传统的 8254 PIC/HPET IRQ 0/8 冲突。已将 `SSDT-HPET.aml` 及对应的 3 项重命名补丁（`HPET _CRS to XCRS`、`RTC IRQ 8`、`TMR IRQ 0`）设为 `Enabled: False`，彻底消除开机 ACPI 报错并保留原厂原生 DSDT HPET 资源定义。
 
 ---
 
