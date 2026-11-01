@@ -69,7 +69,7 @@
    - **解决**：已将所有路径修正为真实的 `PciRoot(0x0)`。
 9. **`SSDT-HPET` 与原厂 DSDT `_STA` 重复定义报错**：
    - **教训**：在 `ACPI -> Add` 中启用了 `SSDT-HPET.aml` 及 `_CRS to XCRS`，但未配置 `_STA to XSTA`，导致开机抛出 `ACPI Error: [_STA] Namespace lookup failure, AE_ALREADY_EXISTS (SSDT: HPET)` 并直接拒载全表，进而引发 `(AppleHPET) HPET: map device registers failed`。
-   - **解决**：AMD Zen 3 架构原生采用 APIC/TSC 时钟体系，无 Intel 传统的 8254 PIC/HPET IRQ 0/8 冲突。已将 `SSDT-HPET.aml` 及对应的 3 项重命名补丁（`HPET _CRS to XCRS`、`RTC IRQ 8`、`TMR IRQ 0`）设为 `Enabled: False`，彻底消除开机 ACPI 报错并保留原厂原生 DSDT HPET 资源定义。
+   - **解决**：AMD Zen 3 架构原生采用 APIC/TSC 时钟体系，无 Intel 传统的 8254 PIC/HPET IRQ 0/8 冲突。已将 `SSDT-HPET.aml` 及对应的 3 项重命名补丁（`HPET _CRS to XCRS`、`RTC IRQ 8`、`TMR IRQ 0`）彻底移除，消除开机 ACPI 报错并保留原厂原生 DSDT HPET 资源定义。
 
 ---
 
@@ -95,7 +95,7 @@
   最终确立**纯软件层面的单显卡锁定与环境隔离方案**（完全规避触摸硬件物理电源轨）：
   1. 在 `config.plist` NVRAM 注入 Apple 原生 `gpu-power-prefs = <01 00 00 00>`，强制锁定 Integrated GPU 独占模式，阻断系统级独显调度；
   2. 在系统层执行 `sudo pmset -a gpuswitch 0`，将电源管理器永久锁定为仅集成显卡，彻底消除 `gpuswitch 2` 自动双显卡切换仲裁死锁；
-  3. 将 `config.plist` 中 `SSDT-GPU-DISABLE.aml` 设为 `Enabled: False`，彻底消除 `AE_ALREADY_EXISTS` 报错与桥设备仲裁风险。
+  3. 彻底移除 `config.plist` 与目录中报错冗余的 `SSDT-GPU-DISABLE.aml`，消除 `AE_ALREADY_EXISTS` 报错与桥设备仲裁风险。
 
 #### 核心根因 2：`darkwake=1` 引发电源门控强行钳制屏幕与 Framebuffer（致命诱因！）
 - **日志确诊数据（2026-10-31 18:07:40 - 18:07:46）**：
@@ -265,8 +265,8 @@ kernel: DumpGPURestart(1043)
    - 所有在 `ACPI -> Patch` 中的补丁（如 `_PRW to XPRW`），`Base` 属性必须保持为空字符串 `""`。填写类似 `\_SB.PCI0` 会直接导致 OpenCore 引导器在启动界面前卡死。
 3. **【绝对红线】严禁使用仅支持 Intel 的 `CpuTscSync.kext`**：
    - 本机为 AMD 处理器，`CpuTscSync` 只支持 Intel 寄存器，使用它会导致多核心时钟失步而开机卡死。必须使用支持 AMD 架构的 `ForgedInvariant.kext`。
-4. **【绝对红线】保持 `SSDT-PTSWAK.aml` 与 `SSDT-EXT3-WSC.aml` 处于禁用状态**：
-   - 此二者会引入对未驱动独显的总线断电冲击以及 LID0 状态死循环，已被确认为引发总线卡死的诱因。在 `ForgedInvariant.kext` 下配合物理电源键/合盖唤醒，无需额外侵入式 ACPI 补丁即可原生完美唤醒。
+4. **【绝对红线】严禁加载 `SSDT-PTSWAK.aml` 与 `SSDT-EXT3-WSC.aml`**：
+   - 此二者会引入对未驱动独显的总线断电冲击以及 LID0 状态死循环，已被确认为引发总线卡死的诱因（已从 ACPI 中彻底剔除）。在 `ForgedInvariant.kext` 下配合物理电源键/合盖唤醒，无需额外侵入式 ACPI 补丁即可原生完美唤醒。
 5. **【绝对红线】保持 `SSDT-PNLF.aml` 的 `_UID = 19`**：
    - 严禁改回 `_UID = 14`，否则唤醒后背光数值会回到 0.88% 的死黑状态。
 6. **【绝对红线】严禁对通电已训练的下级 PCIe 桥设备注入 `_STA = 0`**：
@@ -283,7 +283,7 @@ kernel: DumpGPURestart(1043)
   1. 在 `OC/config.plist` 的 `DeviceProperties -> Add` 中对独显及其伴生音频节点（`PciRoot(0x0)/Pci(0x1,0x1)/Pci(0x0,0x0)` 及 `.../Pci(0x0,0x1)`）注入 `class-code: 0xFFFFFFFF`、`name: #display`、`IOName: #display`，从驱动匹配源头彻底阻断 `IONDRVSupport.kext` 挂载 `IONDRVFramebuffer`，根除休眠 90 秒超时（休眠入睡耗时降至 1.7 秒）；
   2. 在 `OC/config.plist` 的 `NVRAM -> Add -> 7C436110-AB2A-4BBB-A880-FE41995C9F82` 中注入 `gpu-power-prefs = <01 00 00 00>`（并在 `Delete` 数组中添加对应项），开机强制锁定单显卡模式；
   3. 在 `boot-args` 中追加 `-wegnoegpu` 辅助参数；
-  4. 保持禁用报错的 `SSDT-GPU-DISABLE.aml`（设为 `Enabled: False`），消除 `AE_ALREADY_EXISTS` 报错与总线冲突；
+  4. 彻底移除报错且冗余的 `SSDT-GPU-DISABLE.aml`，消除 `AE_ALREADY_EXISTS` 报错与总线冲突；
   5. 进入 macOS 后执行 `sudo pmset -a gpuswitch 0`，将系统 `GPUSwitch` 设为 0（仅集成显卡），彻底终结 `gpuswitch 2` 导致的多卡仲裁死锁。
 
 ### 路线 B：达成 Vega 8 真正硬件级 ACPI S3 深度睡眠与秒醒（✅ 100% 完美攻克）

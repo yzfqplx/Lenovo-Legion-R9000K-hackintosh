@@ -53,6 +53,7 @@ fi
 # 2. 同步仓库最新的 ACPI 表、config.plist 以及必要驱动
 echo "正在同步最新 ACPI 表和 config.plist ..."
 mkdir -p "$EFI_MOUNT/EFI/OC/ACPI"
+rm -f "$EFI_MOUNT/EFI/OC/ACPI/"*.aml
 cp -f "$REPO_DIR/OC/config.plist" "$EFI_MOUNT/EFI/OC/config.plist"
 cp -f "$REPO_DIR/OC/ACPI/"*.aml "$EFI_MOUNT/EFI/OC/ACPI/"
 
