@@ -78,6 +78,14 @@
 				<key>Path</key>
 				<string>SSDT-NVME-DISABLE.aml</string>
 			</dict>
+			<dict>
+				<key>Comment</key>
+				<string>NVMe built-in fix for WD Blue SN570 (Slot 2 / GPP6)</string>
+				<key>Enabled</key>
+				<true/>
+				<key>Path</key>
+				<string>SSDT-NVME.aml</string>
+			</dict>
 		</array>
 		<key>Delete</key>
 		<array/>
@@ -268,6 +276,13 @@
 				</data>
 			</dict>
 			<key>PciRoot(0x0)/Pci(0x2,0x2)/Pci(0x0,0x0)</key>
+			<dict>
+				<key>built-in</key>
+				<data>
+				AQ==
+				</data>
+			</dict>
+			<key>PciRoot(0x0)/Pci(0x2,0x4)/Pci(0x0,0x0)</key>
 			<dict>
 				<key>built-in</key>
 				<data>
