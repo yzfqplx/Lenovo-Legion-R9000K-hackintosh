@@ -59,10 +59,12 @@ cp -f "$REPO_DIR/OC/ACPI/"*.aml "$EFI_MOUNT/EFI/OC/ACPI/"
 
 echo "正在同步必要 Kexts 驱动 ..."
 mkdir -p "$EFI_MOUNT/EFI/OC/Kexts"
-rm -rf "$EFI_MOUNT/EFI/OC/Kexts/NootedRed.kext" "$EFI_MOUNT/EFI/OC/Kexts/AmdTscSync.kext" "$EFI_MOUNT/EFI/OC/Kexts/ForgedInvariant.kext" "$EFI_MOUNT/EFI/OC/Kexts/AMDRyzenCPUPowerManagement.kext" "$EFI_MOUNT/EFI/OC/Kexts/SMCAMDProcessor.kext" "$EFI_MOUNT/EFI/OC/Kexts/SMCRadeonSensors.kext"
+rm -rf "$EFI_MOUNT/EFI/OC/Kexts/NootedRed.kext" "$EFI_MOUNT/EFI/OC/Kexts/AmdTscSync.kext" "$EFI_MOUNT/EFI/OC/Kexts/ForgedInvariant.kext" "$EFI_MOUNT/EFI/OC/Kexts/AMDRyzenCPUPowerManagement.kext" "$EFI_MOUNT/EFI/OC/Kexts/SMCAMDProcessor.kext" "$EFI_MOUNT/EFI/OC/Kexts/SMCRadeonSensors.kext" "$EFI_MOUNT/EFI/OC/Kexts/IntelBluetoothFirmware.kext" "$EFI_MOUNT/EFI/OC/Kexts/IntelBTPatcher.kext"
 cp -R "$REPO_DIR/OC/Kexts/NootedRed.kext" "$EFI_MOUNT/EFI/OC/Kexts/"
 cp -R "$REPO_DIR/OC/Kexts/ForgedInvariant.kext" "$EFI_MOUNT/EFI/OC/Kexts/"
 cp -R "$REPO_DIR/OC/Kexts/SMCRadeonSensors.kext" "$EFI_MOUNT/EFI/OC/Kexts/"
+cp -R "$REPO_DIR/OC/Kexts/IntelBluetoothFirmware.kext" "$EFI_MOUNT/EFI/OC/Kexts/"
+cp -R "$REPO_DIR/OC/Kexts/IntelBTPatcher.kext" "$EFI_MOUNT/EFI/OC/Kexts/"
 
 # 3. 清理可能产生的 .DS_Store / ._* 垃圾文件
 find "$EFI_MOUNT/EFI" \( -name ".DS_Store" -o -name "._*" \) -delete 2>/dev/null || true
